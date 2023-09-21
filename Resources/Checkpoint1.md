@@ -47,7 +47,329 @@ The database of the natural disaster data will have the following tables:
 
 ![Disaster List Table](assets/disaster_list_table.png)
 
-**<!> ADD INFORMATION ABOUT ENDPOINTS <!>**
+### Weather Data Service
+
+* `GET /weather/current?location={location}` - returns the current weather data for the specified location
+
+Response:
+
+```json
+{
+    "country": "Moldova",
+    "location": "Chisinau",
+    "timestamp": "2023-09-12T14:21:57",
+    "temperature": 24,
+    "humidity": 21,
+    "weather_condition": "Sunny"
+}
+```
+
+* `GET /weather/forecast?location={location}` - returns the forecast weather data for the specified location
+
+Response:
+
+```json
+{
+    "country": "Moldova",
+    "location": "Chisinau",
+    "forecast_date": "2023-09-12",
+    "temperature_high": 29,
+    "temperature_low": 17,
+    "humidity": 34,
+}
+```
+
+* `GET /weather/locations?country={country}` - returns the list of locations for the specified country
+
+Response:
+
+```json
+{
+    "country": "Moldova",
+    "locations": [
+        "Chisinau",
+        "Balti",
+        "Cahul"
+    ]
+}
+```
+
+* `POST /weather/add_data?type={type}` - adds the weather data to the database
+
+Request to add current weather data `type=weather`:
+
+```json
+{
+    "location_id": 1,
+    "timestamp": "2023-09-12T17:00:00",
+    "temperature": 24,
+    "humidity": 21,
+    "weather_condition": "Sunny"
+}
+```
+
+Response if `location_id` exists:
+
+```json
+{
+    "message": "Weather data added successfully"
+}
+```
+
+Response if `location_id` does not exist:
+
+```json
+{
+    "message": "Location does not exist"
+}
+```
+
+Request to add forecast data `type=forecast`:
+
+```json
+{
+    "location_id": 1,
+    "forecast_date": "2023-09-12",
+    "temperature_high": 29,
+    "temperature_low": 17,
+    "humidity": 34,
+}
+```
+
+Response if `location_id` exists:
+
+```json
+{
+    "message": "Forecast data added successfully"
+}
+```
+
+Response if `location_id` does not exist:
+
+```json
+{
+    "message": "Location does not exist"
+}
+```
+
+* `DELETE /weather/delete_data?type={type}` - deletes the weather data from the database
+
+Request to delete current weather data `type=weather`:
+
+```json
+{
+    "location_id": 1,
+    "timestamp": "2023-09-12T17:00:00"
+}
+```
+
+Response if `location_id` exists:
+
+```json
+{
+    "message": "Weather data deleted successfully"
+}
+```
+
+Response if `location_id` does not exist:
+
+```json
+{
+    "message": "Location does not exist"
+}
+```
+
+Response if `timestamp` does not exist:
+
+```json
+{
+    "message": "Weather data does not exist"
+}
+```
+
+Request to delete forecast data `type=forecast`:
+
+```json
+{
+    "location_id": 1,
+    "forecast_date": "2023-09-12"
+}
+```
+
+Response if `location_id` exists:
+
+```json
+{
+    "message": "Forecast data deleted successfully"
+}
+```
+
+Response if `location_id` does not exist:
+
+```json
+{
+    "message": "Location does not exist"
+}
+```
+
+Response if `forecast_date` does not exist:
+
+```json
+{
+    "message": "Forecast data does not exist"
+}
+```
+
+### Natural Disaster Data Service
+
+* `GET /disasters` - returns the list of the natural disasters
+
+Response:
+
+```json
+{
+    "disasters": [
+        {
+            "disaster_name": "Tornado",
+            "disaster_description": "Bla bla bla",
+        },
+        {
+            "disaster_name": "Flood",
+            "disaster_description": "Bla bla bla",
+        },
+        {
+            "disaster_name": "Earthquake",
+            "disaster_description": "Bla bla bla",
+        }
+    ]
+}
+```
+
+* `GET /disasters/list?location={location}&active={active}` - returns the list of the natural disasters for the specified city
+
+Response if `location` exists and `active=false`:
+
+```json
+{
+    "country": "Moldova",
+    "location": "Chisinau",
+    "disaster_alerts": [
+        {
+            "alert_name": "Earthquake",
+            "alert_description": "An earthquake with magnitude 5.0 occurred 10km from Chisinau, Moldova at 11:57:23 GMT on 2023-09-12",
+            "start_time": "2023-09-12T12:00:00",
+            "end_time": "2023-09-12T15:00:00"
+        },
+        {
+            "alert_name": "Earthquake",
+            "alert_description": "An earthquake with magnitude 3.5 occurred 10km from Chisinau, Moldova at 05:43:32 GMT on 2023-08-27",
+            "start_time": "2023-08-27T05:45:00",
+            "end_time": "2023-08-27T09:00:00"
+        }
+    ]
+}
+```
+
+Response if `location` exists and `active=true`:
+
+```json
+{
+    "country": "Moldova",
+    "location": "Chisinau",
+    "disaster_alerts": [
+        {
+            "alert_name": "Earthquake",
+            "alert_description": "An earthquake with magnitude 5.0 occurred 10km from Chisinau, Moldova at 11:57:23 GMT on 2023-09-12",
+            "start_time": "2023-09-12T12:00:00",
+            "end_time": "2023-09-12T15:00:00"
+        }
+    ]
+}
+```
+
+Response if `location` does not exist:
+
+```json
+{
+    "message": "Location does not exist"
+}
+```
+
+* `POST /disasters/alert?location={location}` - adds the natural disaster alert to the database
+
+Request:
+
+```json
+{
+    "disaster_id": 1,
+    "alert_description": "An earthquake with magnitude 5.0 occurred 10km from Chisinau, Moldova at 11:57:23 GMT on 2023-09-12",
+    "start_time": "2023-09-12T12:00:00",
+    "end_time": "2023-09-12T15:00:00"
+}
+```
+
+Response if `location` exists:
+
+```json
+{
+    "message": "Disaster alert added successfully"
+}
+```
+
+Response if `location` does not exist:
+
+```json
+{
+    "message": "Location does not exist"
+}
+```
+
+* `PUT /disasters/alert/{alert_id}` - updates the natural disaster alert in the database
+
+Request:
+
+```json
+{
+    "disaster_id": 1,
+    "alert_description": "An earthquake with magnitude 7.0 occurred 10km from Chisinau, Moldova at 11:57:23 GMT on 2023-09-12",
+    "start_time": "2023-09-12T12:00:00",
+    "end_time": "2023-09-12T15:00:00"
+}
+```
+
+Response if `alert_id` exists:
+
+```json
+{
+    "message": "Disaster alert updated successfully"
+}
+```
+
+Response if `alert_id` does not exist:
+
+```json
+{
+    "message": "Disaster alert does not exist"
+}
+```
+
+* `DELETE /disasters/alert/{alert_id}` - deletes the natural disaster alert from the database
+
+Response if `alert_id` exists:
+
+```json
+{
+    "message": "Disaster alert deleted successfully"
+}
+```
+
+Response if `alert_id` does not exist:
+
+```json
+{
+    "message": "Disaster alert does not exist"
+}
+```
 
 ## Deployment and Scaling
 
