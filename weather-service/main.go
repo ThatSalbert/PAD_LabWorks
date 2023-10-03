@@ -1,12 +1,32 @@
 package main
 
 import (
+	"database/sql"
+	"fmt"
 	"github.com/gorilla/mux"
 	"log"
 	"net/http"
+	"weather-service/database"
 )
 
+var db *sql.DB
+var err error
+
 func main() {
+	db, err = database.ConnectToDB()
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer db.Close()
+
+	fmt.Print("Connected to database\n")
+
+	tables, err := database.GetTables(db)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println(tables)
+
 	router := mux.NewRouter()
 
 	//GET /weather/locations?country={country}
