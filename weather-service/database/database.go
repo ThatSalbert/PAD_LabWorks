@@ -3,36 +3,34 @@ package database
 import (
 	"database/sql"
 	_ "github.com/lib/pq"
+	"time"
+	"weather-service/payload"
 )
 
-func ConnectToDB() (*sql.DB, error) {
+func ConnectToDB(maxConnections int) (*sql.DB, error) {
 	db, err := sql.Open("postgres", "user=postgres password=1234567890 dbname=weather-service-database sslmode=disable")
 	if db == nil {
 		return nil, err
 	}
+
+	db.SetMaxOpenConns(maxConnections)
+	db.SetMaxIdleConns(maxConnections / 2)
+	db.SetConnMaxLifetime(time.Second * 10)
 	return db, err
 }
 
-func GetTables(db *sql.DB) ([]string, error) {
-	rows, err := db.Query("SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'")
+func GetCities(country string, db *sql.DB) (locations []payload.Location, err error) {
+	rows, err := db.Query("SELECT city, longitude, latitude FROM location_table WHERE country=$1", country)
 	if err != nil {
-		return nil, err
+		return
 	}
-	defer func(rows *sql.Rows) {
-		err := rows.Close()
-		if err != nil {
-
-		}
-	}(rows)
-
-	var tables []string
+	defer rows.Close()
 	for rows.Next() {
-		var table string
-		err := rows.Scan(&table)
-		if err != nil {
+		var location payload.Location
+		if err = rows.Scan(&location.City, &location.Longitude, &location.Latitude); err != nil {
 			return nil, err
 		}
-		tables = append(tables, table)
+		locations = append(locations, location)
 	}
-	return tables, nil
+	return locations, nil
 }
