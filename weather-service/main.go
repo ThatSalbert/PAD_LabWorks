@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"weather-service/database"
 	"weather-service/payload"
-	"weather-service/worker"
 )
 
 var db *sql.DB
@@ -17,8 +16,6 @@ var err error
 var maxConnections = 10
 
 func main() {
-	worker.InitWorkers(maxConnections)
-
 	db, err = database.ConnectToDB(maxConnections)
 	if err != nil {
 		log.Fatal(err)
@@ -36,10 +33,10 @@ func main() {
 	router.HandleFunc("/weather/locations", GetLocations).Methods("GET").Queries("country", "{country}")
 
 	//GET /weather/current?location={location}
-	router.HandleFunc("/weather/current", GetCurrentWeather).Methods("GET").Queries("location", "{location}")
+	router.HandleFunc("/weather/current", GetCurrentWeather).Methods("GET").Queries("city", "{location}")
 
 	//GET /weather/forecast?location={location}
-	router.HandleFunc("/weather/forecast", GetWeatherForecast).Methods("GET").Queries("location", "{location}")
+	router.HandleFunc("/weather/forecast", GetWeatherForecast).Methods("GET").Queries("city", "{location}")
 
 	//POST /weather/add_data?type={type}
 	router.HandleFunc("/weather/add_data", AddWeatherData).Methods("POST").Queries("type", "{type}")
@@ -53,12 +50,16 @@ func GetLocations(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query()
 	country := query.Get("country")
 
-	responseChannel := make(chan worker.LocationResponse)
-	worker.LocationRequestQueue <- worker.LocationRequest{Country: country, DB: db, Response: responseChannel}
+	if country == "" {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		_, err := w.Write([]byte(`{"message": "country query parameter not specified"}`))
+		if err != nil {
+			return
+		}
+	}
 
-	response := <-responseChannel
-	locations := response.Result
-	funcErr := response.Err
+	locations, funcErr := database.GetCities(country, db)
 
 	if funcErr != nil {
 		w.Header().Set("Content-Type", "application/json")
@@ -90,13 +91,46 @@ func GetLocations(w http.ResponseWriter, r *http.Request) {
 
 func GetCurrentWeather(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query()
-	location := query.Get("location")
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	_, err := w.Write([]byte(`{"message": "GetCurrentWeather called with location=` + location + `"}`))
-	if err != nil {
-		return
+	city := query.Get("city")
+
+	if len(city) == 0 {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		_, err := w.Write([]byte(`{"message": "location query parameter not specified"}`))
+		if err != nil {
+			return
+		}
 	}
+
+	weather, funcErr := database.GetCurrentWeather(city, db)
+
+	if funcErr != nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		_, err := w.Write([]byte(`{"message": "Internal server error"}`))
+		if err != nil {
+			return
+		}
+	} else {
+		if len(weather) == 0 {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusNotFound)
+			_, err := w.Write([]byte(`{"message": "No weather data found for location = ` + city + `"}`))
+			if err != nil {
+				return
+			}
+		} else {
+			response := payload.GenerateCurrentWeatherResponse(weather[0].Country, weather[0].Location, weather[0].Timestamp, weather[0].Temperature, weather[0].Humidity, weather[0].WeatherCondition)
+			jsonResponse, _ := json.Marshal(response)
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusOK)
+			_, err := w.Write(jsonResponse)
+			if err != nil {
+				return
+			}
+		}
+	}
+
 }
 
 func GetWeatherForecast(w http.ResponseWriter, r *http.Request) {
