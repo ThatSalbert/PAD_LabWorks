@@ -31,8 +31,6 @@ func InitWorkers(maxWorkers int) {
 
 func StartWorker(ID int) {
 	defer wg.Done()
-	fmt.Print("Worker ", ID, " started\n")
-
 	for {
 		select {
 		case job := <-LocationRequestQueue:

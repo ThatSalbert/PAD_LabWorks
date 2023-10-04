@@ -3,7 +3,6 @@ package main
 import (
 	"database/sql"
 	"encoding/json"
-	"fmt"
 	"github.com/gorilla/mux"
 	"log"
 	"net/http"
@@ -15,16 +14,21 @@ import (
 var db *sql.DB
 var err error
 
-func main() {
-	worker.InitWorkers(10)
+var maxConnections = 10
 
-	db, err = database.ConnectToDB(10)
+func main() {
+	worker.InitWorkers(maxConnections)
+
+	db, err = database.ConnectToDB(maxConnections)
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer db.Close()
-
-	fmt.Print("Connected to database\n")
+	defer func(db *sql.DB) {
+		err := db.Close()
+		if err != nil {
+			log.Fatal(err)
+		}
+	}(db)
 
 	router := mux.NewRouter()
 
@@ -57,22 +61,29 @@ func GetLocations(w http.ResponseWriter, r *http.Request) {
 	funcErr := response.Err
 
 	if funcErr != nil {
-		fmt.Print("GetCities called with error\n")
-		fmt.Print(funcErr)
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusInternalServerError)
-		_, err := w.Write([]byte(`{"message": "GetCities called with error"}`))
+		_, err := w.Write([]byte(`{"message": "Internal server error"}`))
 		if err != nil {
 			return
 		}
 	} else {
-		response := payload.GenerateLocationResponse(country, locations)
-		jsonResponse, _ := json.Marshal(response)
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
-		_, err := w.Write([]byte(jsonResponse))
-		if err != nil {
-			return
+		if len(locations) == 0 {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusNotFound)
+			_, err := w.Write([]byte(`{"message": "No locations found for country = ` + country + `"}`))
+			if err != nil {
+				return
+			}
+		} else {
+			response := payload.GenerateLocationResponse(country, locations)
+			jsonResponse, _ := json.Marshal(response)
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusOK)
+			_, err := w.Write(jsonResponse)
+			if err != nil {
+				return
+			}
 		}
 	}
 }
