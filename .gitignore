@@ -3,3 +3,5 @@
 /disaster-service/.idea
 /disaster-service/Templates(TO_DELETE).txt
 /gateway/.idea
+/service-discovery/.idea
+/service-discovery/services.json

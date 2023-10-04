@@ -21,7 +21,7 @@ func registerService(HOSTNAME string, PORT string) {
 		"service_name": "weather",
 		"service_address": "http://` + HOSTNAME + `:` + PORT + `"
 	}`)
-	response, err := http.Post("http://localhost:8003/register", "application/json", bytes.NewBuffer(jsonRequest))
+	response, err := http.Post("http://localhost:8002/register", "application/json", bytes.NewBuffer(jsonRequest))
 	if err != nil {
 		log.Fatal(err)
 	} else {
