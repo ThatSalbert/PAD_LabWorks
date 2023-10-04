@@ -68,7 +68,7 @@ func GetCurrentWeather(city string, db *sql.DB) (weather []payload.CurrentWeathe
 		err := errors.New("location not found")
 		return nil, err
 	} else {
-		rows, err := db.Query("SELECT location_table.country, location_table.city, location_table.longitude, location_table.latitude, current_weather_table.timestamp, current_weather_table.temperature, current_weather_table.humidity, current_weather_table.weather_condition FROM current_weather_table INNER JOIN location_table ON location_table.location_id = $1;", locationID)
+		rows, err := db.Query("SELECT DISTINCT ON (location_table.location_id) location_table.country, location_table.city, location_table.longitude, location_table.latitude, current_weather_table.timestamp, current_weather_table.temperature, current_weather_table.humidity, current_weather_table.weather_condition FROM current_weather_table INNER JOIN location_table ON location_table.location_id = $1 WHERE location_table.location_id = $1 ORDER BY location_table.location_id, current_weather_table.timestamp DESC;", locationID)
 		if err != nil {
 			return nil, err
 		}

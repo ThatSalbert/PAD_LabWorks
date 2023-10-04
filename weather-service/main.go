@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"database/sql"
 	"encoding/json"
 	"github.com/gorilla/mux"
@@ -14,6 +15,25 @@ var db *sql.DB
 var err error
 
 var maxConnections = 10
+
+func registerService(HOSTNAME string, PORT string) {
+	var jsonRequest = []byte(`{
+		"service_name": "weather",
+		"service_address": "http://` + HOSTNAME + `:` + PORT + `"
+	}`)
+	response, err := http.Post("http://localhost:8003/register", "application/json", bytes.NewBuffer(jsonRequest))
+	if err != nil {
+		log.Fatal(err)
+	} else {
+		if response.StatusCode == 200 {
+			log.Println("Service registered successfully")
+		} else if response.StatusCode == 409 {
+			log.Println("Service already registered")
+		} else {
+			log.Println("Service registration failed")
+		}
+	}
+}
 
 func main() {
 	db, err = database.ConnectToDB(maxConnections)
@@ -32,11 +52,11 @@ func main() {
 	//GET /weather/locations?country={country}
 	router.HandleFunc("/weather/locations", GetLocations).Methods("GET").Queries("country", "{country}")
 
-	//GET /weather/current?location={location}
-	router.HandleFunc("/weather/current", GetCurrentWeather).Methods("GET").Queries("city", "{location}")
+	//GET /weather/current?city={city}
+	router.HandleFunc("/weather/current", GetCurrentWeather).Methods("GET").Queries("city", "{city}")
 
-	//GET /weather/forecast?location={location}
-	router.HandleFunc("/weather/forecast", GetWeatherForecast).Methods("GET").Queries("city", "{location}")
+	//GET /weather/forecast?city={city}
+	router.HandleFunc("/weather/forecast", GetWeatherForecast).Methods("GET").Queries("city", "{city}")
 
 	//POST /weather/add_data?type={type}
 	router.HandleFunc("/weather/add_data", AddWeatherData).Methods("POST").Queries("type", "{type}")
@@ -44,7 +64,10 @@ func main() {
 	//DELETE /weather/delete_data?type={type}
 	router.HandleFunc("/weather/delete_data", DeleteWeatherData).Methods("DELETE").Queries("type", "{type}")
 
+	registerService("localhost", "8000")
+
 	log.Fatal(http.ListenAndServe(":8000", router))
+
 }
 func GetLocations(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query()
