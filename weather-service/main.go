@@ -16,9 +16,9 @@ var err error
 
 var maxConnections = 10
 
-func registerService(HOSTNAME string, PORT string) {
+func registerService(HOSTNAME string, PORT string, SERVICE_NAME string) {
 	var jsonRequest = []byte(`{
-		"service_name": "weather",
+		"service_name": "` + SERVICE_NAME + `",
 		"service_address": "http://` + HOSTNAME + `:` + PORT + `"
 	}`)
 	response, err := http.Post("http://localhost:8002/register", "application/json", bytes.NewBuffer(jsonRequest))
@@ -64,7 +64,7 @@ func main() {
 	//DELETE /weather/delete_data?type={type}
 	router.HandleFunc("/weather/delete_data", DeleteWeatherData).Methods("DELETE").Queries("type", "{type}")
 
-	registerService("localhost", "8000")
+	registerService("localhost", "8000", "weather")
 
 	log.Fatal(http.ListenAndServe(":8000", router))
 

@@ -19,7 +19,7 @@ func ConnectToDB(maxConnections int) (*sql.DB, error) {
 	db.SetMaxOpenConns(maxConnections)
 	db.SetMaxIdleConns(maxConnections / 2)
 	db.SetConnMaxLifetime(time.Second * 5)
-	return db, err
+	return db, nil
 }
 
 func GetCities(country string, db *sql.DB) (locations []payload.Location, err error) {
