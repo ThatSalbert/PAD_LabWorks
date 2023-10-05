@@ -110,7 +110,7 @@ func GetForecastWeather(city string, db *sql.DB) (forecast []payload.ForecastWea
 		err := errors.New("location not found")
 		return nil, err
 	} else {
-		rows, err := db.Query("SELECT lt.country, lt.city, lt.longitude, lt.latitude, fwt.timestamp, fwt.temperature_high, fwt.temperature_low, fwt.humidity, fwt.weather_condition FROM forecast_weather_table AS fwt INNER JOIN location_table AS lt ON lt.location_id = $1 WHERE fwt.timestamp >= NOW() AND fwt.timestamp <= NOW()::DATE + INTERVAL '5 days' ORDER BY lt.location_id, fwt.timestamp;", locationID)
+		rows, err := db.Query("SELECT lt.country, lt.city, lt.longitude, lt.latitude, fwt.timestamp, fwt.temperature_high, fwt.temperature_low, fwt.humidity, fwt.weather_condition FROM forecast_weather_table AS fwt INNER JOIN location_table AS lt ON lt.location_id = fwt.location_id WHERE fwt.location_id = $1 AND fwt.timestamp >= NOW() AND fwt.timestamp <= NOW()::DATE + INTERVAL '5 days' ORDER BY lt.location_id, fwt.timestamp;", locationID)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -120,6 +120,10 @@ func GetForecastWeather(city string, db *sql.DB) (forecast []payload.ForecastWea
 				log.Fatal(err)
 			}
 		}(rows)
+		if errors.Is(rows.Scan(), sql.ErrNoRows) {
+			fmt.Print("No rows found")
+			return nil, nil
+		}
 		var forecastWeather payload.ForecastWeatherResponse
 		for rows.Next() {
 			var forecastWeatherDay payload.ForecastWeatherDay
@@ -129,8 +133,12 @@ func GetForecastWeather(city string, db *sql.DB) (forecast []payload.ForecastWea
 			}
 			forecastWeather.ForecastWeatherDays = append(forecastWeather.ForecastWeatherDays, forecastWeatherDay)
 		}
-		forecast = append(forecast, forecastWeather)
-		return forecast, nil
+		if len(forecastWeather.ForecastWeatherDays) == 0 {
+			return nil, errors.New("no forecast weather found")
+		} else {
+			forecast = append(forecast, forecastWeather)
+			return forecast, nil
+		}
 	}
 }
 
