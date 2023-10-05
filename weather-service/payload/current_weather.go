@@ -1,14 +1,5 @@
 package payload
 
-type CurrentWeather struct {
-	Country          string   `json:"country"`
-	Location         Location `json:"location"`
-	Timestamp        string   `json:"timestamp"`
-	Temperature      int      `json:"temperature"`
-	Humidity         int      `json:"humidity"`
-	WeatherCondition string   `json:"weather_condition"`
-}
-
 type CurrentWeatherResponse struct {
 	Country          string   `json:"country"`
 	Location         Location `json:"location"`
