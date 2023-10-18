@@ -10,10 +10,3 @@ type LocationResponse struct {
 	Country   string     `json:"country"`
 	Locations []Location `json:"locations"`
 }
-
-func GenerateLocationResponse(country string, locations []Location) LocationResponse {
-	return LocationResponse{
-		Country:   country,
-		Locations: locations,
-	}
-}

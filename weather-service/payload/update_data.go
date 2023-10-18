@@ -1,6 +1,7 @@
 package payload
 
-type AddDataWeather struct {
+type UpdateDataWeather struct {
+	WeatherID        int64  `json:"weather_id"`
 	Country          string `json:"country"`
 	City             string `json:"city"`
 	Timestamp        string `json:"timestamp"`
@@ -9,7 +10,8 @@ type AddDataWeather struct {
 	WeatherCondition string `json:"weather_condition"`
 }
 
-type AddDataForecast struct {
+type UpdateDataForecast struct {
+	ForecastID       int64  `json:"forecast_id"`
 	Country          string `json:"country"`
 	City             string `json:"city"`
 	Timestamp        string `json:"timestamp"`

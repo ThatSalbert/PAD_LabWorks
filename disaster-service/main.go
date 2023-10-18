@@ -4,9 +4,12 @@ import (
 	"bytes"
 	"database/sql"
 	"disaster-service/database"
+	"disaster-service/payload"
+	"encoding/json"
 	"github.com/gorilla/mux"
 	"log"
 	"net/http"
+	"strconv"
 )
 
 var db *sql.DB
@@ -50,17 +53,14 @@ func main() {
 	//GET /disaster
 	router.HandleFunc("/disaster", GetDisasters).Methods("GET")
 
-	//GET /disaster/list?city={city}&active={active}
-	router.HandleFunc("/disaster/list", GetDisasterList).Methods("GET").Queries("city", "{city}", "active", "{active}")
+	//GET /disaster/list?country={country}&city={city}&active={active}
+	router.HandleFunc("/disaster/list", GetDisasterList).Methods("GET").Queries("country", "{country}", "city", "{city}", "active", "{active}")
 
-	//POST /disaster/alert?city={city}
-	router.HandleFunc("/disaster/alert", PostDisasterAlert).Methods("POST").Queries("city", "{city}")
+	//POST /disaster/alert
+	router.HandleFunc("/disaster/alert", PostDisasterAlert).Methods("POST")
 
 	//PUT /disaster/alert?alert_id={alert_id}
 	router.HandleFunc("/disaster/alert", PutDisasterAlert).Methods("PUT").Queries("alert_id", "{alert_id}")
-
-	//DELETE /disaster/alert?alert_id={alert_id}
-	router.HandleFunc("/disaster/alert", DeleteDisasterAlert).Methods("DELETE").Queries("alert_id", "{alert_id}")
 
 	registerService("localhost", "8001", "disaster")
 
@@ -68,33 +68,132 @@ func main() {
 }
 
 func GetDisasters(w http.ResponseWriter, _ *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	_, err := w.Write([]byte(`{"message": "GetDisasters called"}`))
-	if err != nil {
+	disasters, funcErrCode, funcErr := database.GetDisasterTypes(db)
+	switch funcErrCode {
+	case 200:
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		err := json.NewEncoder(w).Encode(disasters)
+		if err != nil {
+			return
+		}
+		return
+	case 404:
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusNotFound)
+		_, err := w.Write([]byte(`{"message": ` + "\"" + funcErr.Error() + "\"" + `}`))
+		if err != nil {
+			return
+		}
+		return
+	default:
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		_, err := w.Write([]byte(`{"message": ` + "\"" + funcErr.Error() + "\"" + `}`))
+		if err != nil {
+			return
+		}
 		return
 	}
 }
 
 func GetDisasterList(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query()
-	location := query.Get("city")
+	country := query.Get("country")
+	city := query.Get("city")
 	active := query.Get("active")
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	_, err := w.Write([]byte(`{"message": "GetDisasterList called with location=` + location + ` and active=` + active + `"}`))
-	if err != nil {
+	if active == "" || city == "" {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		_, err := w.Write([]byte(`{"message": "country query parameter not specified"}`))
+		if err != nil {
+			return
+		}
+		return
+	}
+	var activeBool bool
+	if active == "true" {
+		activeBool = true
+	} else if active == "false" {
+		activeBool = false
+	} else {
+		activeBool = false
+	}
+	disasterList, funcErrCode, funcErr := database.GetDisasterList(db, country, city, activeBool)
+	switch funcErrCode {
+	case 200:
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		err := json.NewEncoder(w).Encode(disasterList)
+		if err != nil {
+			return
+		}
+		return
+	case 404:
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusNotFound)
+		_, err := w.Write([]byte(`{"message": ` + "\"" + funcErr.Error() + "\"" + `}`))
+		if err != nil {
+			return
+		}
+		return
+	default:
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		_, err := w.Write([]byte(`{"message": ` + "\"" + funcErr.Error() + "\"" + `}`))
+		if err != nil {
+			return
+		}
 		return
 	}
 }
 
 func PostDisasterAlert(w http.ResponseWriter, r *http.Request) {
-	query := r.URL.Query()
-	location := query.Get("city")
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	_, err := w.Write([]byte(`{"message": "PostDisasterAlert called with location=` + location + `"}`))
+	jsonDecoder := json.NewDecoder(r.Body)
+	var alert payload.AddAlert
+	err := jsonDecoder.Decode(&alert)
 	if err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		_, err := w.Write([]byte(`{"message": "invalid JSON payload"}`))
+		if err != nil {
+			return
+		}
+		return
+	}
+	disasterTypeID, funcErrCode, funcErr := database.AddAlert(alert, db)
+	switch funcErrCode {
+	case 200:
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		_, err := w.Write([]byte(`{"message": "alert data added successfully with alert_id=` + strconv.Itoa(*disasterTypeID) + `"}`))
+		if err != nil {
+			return
+		}
+		return
+	case 409:
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusConflict)
+		_, err := w.Write([]byte(`{"message": "alert data already exists"}`))
+		if err != nil {
+			return
+		}
+		return
+	case 404:
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusNotFound)
+		_, err := w.Write([]byte(`{"message": ` + "\"" + funcErr.Error() + "\"" + `}`))
+		if err != nil {
+			return
+		}
+		return
+	default:
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		_, err := w.Write([]byte(`{"message": ` + "\"" + funcErr.Error() + "\"" + `}`))
+		if err != nil {
+			return
+		}
 		return
 	}
 }
@@ -102,21 +201,53 @@ func PostDisasterAlert(w http.ResponseWriter, r *http.Request) {
 func PutDisasterAlert(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query()
 	alertId := query.Get("alert_id")
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	_, err := w.Write([]byte(`{"message": "PutDisasterAlert called with alert_id=` + alertId + `"}`))
-	if err != nil {
+	if alertId == "" {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		_, err := w.Write([]byte(`{"message": "alert_id query parameter not specified"}`))
+		if err != nil {
+			return
+		}
 		return
 	}
-}
-
-func DeleteDisasterAlert(w http.ResponseWriter, r *http.Request) {
-	query := r.URL.Query()
-	alertId := query.Get("alert_id")
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	_, err := w.Write([]byte(`{"message": "DeleteDisasterAlert called with alert_id=` + alertId + `"}`))
+	jsonDecoder := json.NewDecoder(r.Body)
+	var alert payload.UpdateAlert
+	err := jsonDecoder.Decode(&alert)
 	if err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		_, err := w.Write([]byte(`{"message": "invalid JSON payload"}`))
+		if err != nil {
+			return
+		}
+		return
+	}
+	alertID, _ := strconv.Atoi(alertId)
+	funcErrCode, funcErr := database.UpdateAlert(alertID, alert, db)
+	switch funcErrCode {
+	case 200:
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		_, err := w.Write([]byte(`{"message": "alert data updated successfully with alert_id=` + strconv.Itoa(alertID) + `"}`))
+		if err != nil {
+			return
+		}
+		return
+	case 404:
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusNotFound)
+		_, err := w.Write([]byte(`{"message": ` + "\"" + funcErr.Error() + "\"" + `}`))
+		if err != nil {
+			return
+		}
+		return
+	default:
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		_, err := w.Write([]byte(`{"message": ` + "\"" + funcErr.Error() + "\"" + `}`))
+		if err != nil {
+			return
+		}
 		return
 	}
 }

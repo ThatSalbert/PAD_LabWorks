@@ -7,6 +7,7 @@ import (
 	"github.com/gorilla/mux"
 	"log"
 	"net/http"
+	"strconv"
 	"weather-service/database"
 	"weather-service/payload"
 )
@@ -52,17 +53,17 @@ func main() {
 	//GET /weather/locations?country={country}
 	router.HandleFunc("/weather/locations", GetLocations).Methods("GET").Queries("country", "{country}")
 
-	//GET /weather/current?city={city}
-	router.HandleFunc("/weather/current", GetCurrentWeather).Methods("GET").Queries("city", "{city}")
+	//GET /weather/current?country={country}&city={city}
+	router.HandleFunc("/weather/current", GetCurrentWeather).Methods("GET").Queries("country", "{country}", "city", "{city}")
 
-	//GET /weather/forecast?city={city}
-	router.HandleFunc("/weather/forecast", GetWeatherForecast).Methods("GET").Queries("city", "{city}")
+	//GET /weather/forecast?country={country}&city={city}
+	router.HandleFunc("/weather/forecast", GetWeatherForecast).Methods("GET").Queries("country", "{country}", "city", "{city}")
 
 	//POST /weather/add_data?type={type}
 	router.HandleFunc("/weather/add_data", AddWeatherData).Methods("POST").Queries("type", "{type}")
 
-	//DELETE /weather/delete_data?type={type}
-	router.HandleFunc("/weather/delete_data", DeleteWeatherData).Methods("DELETE").Queries("type", "{type}")
+	//PUT /weather/update_data?type={type}
+	router.HandleFunc("/weather/update_data", UpdateWeatherData).Methods("PUT").Queries("type", "{type}")
 
 	registerService("localhost", "8000", "weather")
 
@@ -79,114 +80,126 @@ func GetLocations(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			return
 		}
+		return
 	}
-	locations, funcErr := database.GetCities(country, db)
-	if funcErr != nil {
+	locations, funcErrCode, funcErr := database.GetCities(country, db)
+	switch funcErrCode {
+	case 200:
+		var locationResponse payload.LocationResponse
+		locationResponse.Country = country
+		locationResponse.Locations = locations
 		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusInternalServerError)
-		_, err := w.Write([]byte(`{"message": "Internal server error"}`))
+		w.WriteHeader(http.StatusOK)
+		jsonResponse, _ := json.Marshal(locationResponse)
+		_, err := w.Write(jsonResponse)
 		if err != nil {
 			return
 		}
-	} else {
-		if len(locations) == 0 {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusNotFound)
-			_, err := w.Write([]byte(`{"message": "No locations found for country = ` + country + `"}`))
-			if err != nil {
-				return
-			}
-		} else {
-			response := payload.GenerateLocationResponse(country, locations)
-			jsonResponse, _ := json.Marshal(response)
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusOK)
-			_, err := w.Write(jsonResponse)
-			if err != nil {
-				return
-			}
+		return
+	case 404:
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusNotFound)
+		_, err := w.Write([]byte(`{"message": ` + "\"" + funcErr.Error() + "\"" + `}`))
+		if err != nil {
+			return
 		}
+		return
+	default:
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		_, err := w.Write([]byte(`{"message": ` + "\"" + funcErr.Error() + "\"" + `}`))
+		if err != nil {
+			return
+		}
+		return
 	}
 }
 
 func GetCurrentWeather(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query()
+	country := query.Get("country")
 	city := query.Get("city")
-	if len(city) == 0 {
+	if len(country) == 0 || len(city) == 0 {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
-		_, err := w.Write([]byte(`{"message": "location query parameter not specified"}`))
+		_, err := w.Write([]byte(`{"message": "country or city query parameter not specified"}`))
 		if err != nil {
 			return
 		}
+		return
 	}
-	weather, funcErr := database.GetCurrentWeather(city, db)
-	if funcErr != nil {
+	weather, funcCodeErr, funcErr := database.GetCurrentWeather(country, city, db)
+	switch funcCodeErr {
+	case 200:
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		jsonResponse, _ := json.Marshal(weather)
+		_, err := w.Write(jsonResponse)
+		if err != nil {
+			return
+		}
+		return
+	case 404:
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusNotFound)
+		var funcErrString string
+		funcErrString = funcErr.Error()
+		_, err := w.Write([]byte(`{"message": ` + "\"" + funcErrString + "\"" + `}`))
+		if err != nil {
+			return
+		}
+		return
+	default:
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusInternalServerError)
-		_, err := w.Write([]byte(`{"message": "Internal server error"}`))
+		_, err := w.Write([]byte(`{"message": ` + "\"" + funcErr.Error() + "\"" + `}`))
 		if err != nil {
 			return
 		}
-	} else {
-		if len(weather) == 0 {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusNotFound)
-			_, err := w.Write([]byte(`{"message": "No weather data found for location = ` + city + `"}`))
-			if err != nil {
-				return
-			}
-		} else {
-			response := payload.GenerateCurrentWeatherResponse(weather[0].Country, weather[0].Location, weather[0].Timestamp, weather[0].Temperature, weather[0].Humidity, weather[0].WeatherCondition)
-			jsonResponse, _ := json.Marshal(response)
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusOK)
-			_, err := w.Write(jsonResponse)
-			if err != nil {
-				return
-			}
-		}
+		return
 	}
-
 }
 
 func GetWeatherForecast(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query()
+	country := query.Get("country")
 	city := query.Get("city")
-	if len(city) == 0 {
+	if len(country) == 0 || len(city) == 0 {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
-		_, err := w.Write([]byte(`{"message": "location query parameter not specified"}`))
+		_, err := w.Write([]byte(`{"message": "country or city query parameter not specified"}`))
 		if err != nil {
 			return
 		}
+		return
 	}
-	forecast, funcErr := database.GetForecastWeather(city, db)
-	if funcErr != nil {
+	weather, funcCodeErr, funcErr := database.GetForecastWeather(country, city, db)
+	switch funcCodeErr {
+	case 200:
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		jsonResponse, _ := json.Marshal(weather)
+		_, err := w.Write(jsonResponse)
+		if err != nil {
+			return
+		}
+		return
+	case 404:
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusNotFound)
+		_, err := w.Write([]byte(`{"message": ` + "\"" + funcErr.Error() + "\"" + `}`))
+		if err != nil {
+			return
+		}
+		return
+	default:
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusInternalServerError)
-		_, err := w.Write([]byte(`{"message": "Internal server error"}`))
+		_, err := w.Write([]byte(`{"message": ` + "\"" + funcErr.Error() + "\"" + `}`))
 		if err != nil {
 			return
 		}
-	} else {
-		if len(forecast) == 0 {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusNotFound)
-			_, err := w.Write([]byte(`{"message": "No weather data found for location = ` + city + `"}`))
-			if err != nil {
-				return
-			}
-		} else {
-			response := payload.GenerateForecastWeatherResponse(forecast[0].Country, forecast[0].Location, forecast[0].ForecastWeatherDays)
-			jsonResponse, _ := json.Marshal(response)
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusOK)
-			_, err := w.Write(jsonResponse)
-			if err != nil {
-				return
-			}
-		}
+		return
 	}
 }
 
@@ -200,35 +213,46 @@ func AddWeatherData(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusBadRequest)
-			_, err := w.Write([]byte(`{"message": "Invalid JSON payload"}`))
+			_, err := w.Write([]byte(`{"message": "invalid JSON payload"}`))
 			if err != nil {
 				return
 			}
+			return
 		}
-		funcErr := database.AddCurrentWeather(weatherData, db)
-		if funcErr != nil {
-			if funcErr.Error() == "value already exists" {
-				w.Header().Set("Content-Type", "application/json")
-				w.WriteHeader(http.StatusConflict)
-				_, err := w.Write([]byte(`{"message": "Value already exists"}`))
-				if err != nil {
-					return
-				}
-			} else {
-				w.Header().Set("Content-Type", "application/json")
-				w.WriteHeader(http.StatusInternalServerError)
-				_, err := w.Write([]byte(`{"message": "Internal server error"}`))
-				if err != nil {
-					return
-				}
-			}
-		} else {
+		weatherID, funcErrCode, funcErr := database.AddCurrentWeather(weatherData, db)
+		switch funcErrCode {
+		case 200:
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusOK)
-			_, err := w.Write([]byte(`{"message": "AddWeatherData called with type=` + dataType + `"}`))
+			_, err := w.Write([]byte(`{"message": "weather data added successfully with id=` + strconv.FormatInt(*weatherID, 10) + `"}`))
 			if err != nil {
 				return
 			}
+			return
+		case 409:
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusConflict)
+			_, err := w.Write([]byte(`{"message": ` + "\"" + funcErr.Error() + "\"" + `}`))
+			if err != nil {
+				return
+			}
+			return
+		case 404:
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusNotFound)
+			_, err := w.Write([]byte(`{"message": ` + "\"" + funcErr.Error() + "\"" + `}`))
+			if err != nil {
+				return
+			}
+			return
+		default:
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusInternalServerError)
+			_, err := w.Write([]byte(`{"message": ` + "\"" + funcErr.Error() + "\"" + `}`))
+			if err != nil {
+				return
+			}
+			return
 		}
 	} else if dataType == "forecast" {
 		var forecastData payload.AddDataForecast
@@ -236,121 +260,131 @@ func AddWeatherData(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusBadRequest)
-			_, err := w.Write([]byte(`{"message": "Invalid JSON payload"}`))
+			_, err := w.Write([]byte(`{"message": "invalid JSON payload"}`))
 			if err != nil {
 				return
 			}
+			return
 		}
-		funcErr := database.AddForecastWeather(forecastData, db)
-		if funcErr != nil {
-			if funcErr.Error() == "value already exists" {
-				w.Header().Set("Content-Type", "application/json")
-				w.WriteHeader(http.StatusConflict)
-				_, err := w.Write([]byte(`{"message": "Value already exists"}`))
-				if err != nil {
-					return
-				}
-			} else {
-				w.Header().Set("Content-Type", "application/json")
-				w.WriteHeader(http.StatusInternalServerError)
-				_, err := w.Write([]byte(`{"message": "Internal server error"}`))
-				if err != nil {
-					return
-				}
-			}
-		} else {
+		forecastID, funcErrCode, funcErr := database.AddForecastWeather(forecastData, db)
+		switch funcErrCode {
+		case 200:
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusOK)
-			_, err := w.Write([]byte(`{"message": "AddWeatherData called with type=` + dataType + `"}`))
+			_, err := w.Write([]byte(`{"message": "forecast data added successfully with id=` + strconv.FormatInt(*forecastID, 10) + `"}`))
 			if err != nil {
 				return
 			}
-		}
-	} else {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusBadRequest)
-		_, err := w.Write([]byte(`{"message": "Invalid type query parameter"}`))
-		if err != nil {
+			return
+		case 409:
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusConflict)
+			_, err := w.Write([]byte(`{"message": ` + "\"" + funcErr.Error() + "\"" + `}`))
+			if err != nil {
+				return
+			}
+			return
+		case 404:
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusNotFound)
+			_, err := w.Write([]byte(`{"message": ` + "\"" + funcErr.Error() + "\"" + `}`))
+			if err != nil {
+				return
+			}
+			return
+		default:
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusInternalServerError)
+			_, err := w.Write([]byte(`{"message": ` + "\"" + funcErr.Error() + "\"" + `}`))
+			if err != nil {
+				return
+			}
 			return
 		}
 	}
 }
 
-func DeleteWeatherData(w http.ResponseWriter, r *http.Request) {
+func UpdateWeatherData(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query()
 	dataType := query.Get("type")
 	jsonDecoder := json.NewDecoder(r.Body)
 	if dataType == "weather" {
-		var weatherData payload.DeleteData
+		var weatherData payload.UpdateDataWeather
 		err := jsonDecoder.Decode(&weatherData)
 		if err != nil {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusBadRequest)
-			_, err := w.Write([]byte(`{"message": "Invalid JSON payload"}`))
+			_, err := w.Write([]byte(`{"message": "invalid JSON payload"}`))
 			if err != nil {
 				return
 			}
+			return
 		}
-		funcErr := database.DeleteWeather(weatherData.City, weatherData.Timestamp, db)
-		if funcErr != nil {
-			if funcErr.Error() == "value does not exist" {
-				w.Header().Set("Content-Type", "application/json")
-				w.WriteHeader(http.StatusNotFound)
-				_, err := w.Write([]byte(`{"message": "Value does not exist"}`))
-				if err != nil {
-					return
-				}
-			} else {
-				w.Header().Set("Content-Type", "application/json")
-				w.WriteHeader(http.StatusInternalServerError)
-				_, err := w.Write([]byte(`{"message": "Internal server error"}`))
-				if err != nil {
-					return
-				}
-			}
-		} else {
+		funcErrCode, funcErr := database.UpdateWeather(weatherData.WeatherID, weatherData, db)
+		switch funcErrCode {
+		case 200:
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusOK)
-			_, err := w.Write([]byte(`{"message": "DeleteWeatherData called with type=` + dataType + `"}`))
+			_, err := w.Write([]byte(`{"message": "weather data updated successfully with id=` + strconv.FormatInt(weatherData.WeatherID, 10) + `"}`))
 			if err != nil {
 				return
 			}
+			return
+		case 404:
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusNotFound)
+			_, err := w.Write([]byte(`{"message": "weather data not found"}`))
+			if err != nil {
+				return
+			}
+			return
+		default:
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusInternalServerError)
+			_, err := w.Write([]byte(`{"message": ` + "\"" + funcErr.Error() + "\"" + `}`))
+			if err != nil {
+				return
+			}
+			return
 		}
 	} else if dataType == "forecast" {
-		var forecastData payload.DeleteData
+		var forecastData payload.UpdateDataForecast
 		err := jsonDecoder.Decode(&forecastData)
 		if err != nil {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusBadRequest)
-			_, err := w.Write([]byte(`{"message": "Invalid JSON payload"}`))
+			_, err := w.Write([]byte(`{"message": "invalid JSON payload"}`))
 			if err != nil {
 				return
 			}
+			return
 		}
-		funcErr := database.DeleteForecast(forecastData.City, forecastData.Timestamp, db)
-		if funcErr != nil {
-			if funcErr.Error() == "value does not exist" {
-				w.Header().Set("Content-Type", "application/json")
-				w.WriteHeader(http.StatusNotFound)
-				_, err := w.Write([]byte(`{"message": "Value does not exist"}`))
-				if err != nil {
-					return
-				}
-			} else {
-				w.Header().Set("Content-Type", "application/json")
-				w.WriteHeader(http.StatusInternalServerError)
-				_, err := w.Write([]byte(`{"message": "Internal server error"}`))
-				if err != nil {
-					return
-				}
-			}
-		} else {
+		funcErrCode, funcErr := database.UpdateForecast(forecastData.ForecastID, forecastData, db)
+		switch funcErrCode {
+		case 200:
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusOK)
-			_, err := w.Write([]byte(`{"message": "DeleteWeatherData called with type=` + dataType + `"}`))
+			_, err := w.Write([]byte(`{"message": "forecast data updated successfully with id=` + strconv.FormatInt(forecastData.ForecastID, 10) + `"}`))
 			if err != nil {
 				return
 			}
+			return
+		case 404:
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusNotFound)
+			_, err := w.Write([]byte(`{"message": "forecast data not found"}`))
+			if err != nil {
+				return
+			}
+			return
+		default:
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusInternalServerError)
+			_, err := w.Write([]byte(`{"message": ` + "\"" + funcErr.Error() + "\"" + `}`))
+			if err != nil {
+				return
+			}
+			return
 		}
 	}
 }
