@@ -5,3 +5,7 @@
 /gateway/.idea
 /service-discovery/.idea
 /service-discovery/services.json
+/gateway/.vscode
+/service-discovery/.vscode
+/weather-service/.vscode
+/disaster-service/.vscode
