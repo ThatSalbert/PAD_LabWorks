@@ -10,8 +10,8 @@ import (
 	"time"
 )
 
-func ConnectToDB(maxConnections int) (*sql.DB, error) {
-	db, err := sql.Open("postgres", "user=postgres password=1234567890 dbname=disaster-service-database sslmode=disable")
+func ConnectToDB(maxConnections int, DB_HOSTNAME string, DB_PORT string) (db *sql.DB, err error) {
+	db, err = sql.Open("postgres", "user=postgres password=postgres, dbname=disaster-service-database host="+DB_HOSTNAME+" port="+DB_PORT+" sslmode=disable")
 	if db == nil {
 		return nil, err
 	}

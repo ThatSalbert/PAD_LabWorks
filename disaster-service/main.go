@@ -6,10 +6,12 @@ import (
 	"disaster-service/database"
 	"disaster-service/payload"
 	"encoding/json"
-	"github.com/gorilla/mux"
 	"log"
 	"net/http"
+	"os"
 	"strconv"
+
+	"github.com/gorilla/mux"
 )
 
 var db *sql.DB
@@ -17,12 +19,21 @@ var err error
 
 var maxConnections = 10
 
-func registerService(HOSTNAME string, PORT string, SERVICE_NAME string) {
+var (
+	DISASTER_HOSTNAME 		= os.Getenv("DISASTER_HOSTNAME")
+	DISASTER_PORT     		= os.Getenv("DISASTER_PORT")
+	SERVICEDISC_HOSTNAME 	= os.Getenv("SERVICEDISC_HOSTNAME")
+	SERVICEDISC_PORT     	= os.Getenv("SERVICEDISC_PORT")
+	DB_HOSTNAME	 			= os.Getenv("DB_HOSTNAME")
+	DB_PORT     			= os.Getenv("DB_PORT")
+)
+
+func registerService(DISASTER_HOSTNAME string, DISASTER_PORT string, SERVICEDISC_HOSTNAME string, SERVICEDISC_PORT string) {
 	var jsonRequest = []byte(`{
-		"service_name": "` + SERVICE_NAME + `",
-		"service_address": "http://` + HOSTNAME + `:` + PORT + `"
+		"service_name": "` + DISASTER_HOSTNAME + `",
+		"service_address": "http://` + DISASTER_HOSTNAME + `:` + DISASTER_PORT + `"
 	}`)
-	response, err := http.Post("http://localhost:8002/register", "application/json", bytes.NewBuffer(jsonRequest))
+	response, err := http.Post("http://"+SERVICEDISC_HOSTNAME+":"+SERVICEDISC_PORT+"/register", "application/json", bytes.NewBuffer(jsonRequest))
 	if err != nil {
 		log.Fatal(err)
 	} else {
@@ -37,7 +48,7 @@ func registerService(HOSTNAME string, PORT string, SERVICE_NAME string) {
 }
 
 func main() {
-	db, err = database.ConnectToDB(maxConnections)
+	db, err = database.ConnectToDB(maxConnections, DB_HOSTNAME, DB_PORT)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -62,9 +73,9 @@ func main() {
 	//PUT /disaster/alert?alert_id={alert_id}
 	router.HandleFunc("/disaster/alert", PutDisasterAlert).Methods("PUT").Queries("alert_id", "{alert_id}")
 
-	registerService("localhost", "8001", "disaster")
+	registerService(DISASTER_HOSTNAME, DISASTER_PORT, "disaster-service")
 
-	log.Fatal(http.ListenAndServe(":8001", router))
+	log.Fatal(http.ListenAndServe(":"+DISASTER_PORT, router))
 }
 
 func GetDisasters(w http.ResponseWriter, _ *http.Request) {

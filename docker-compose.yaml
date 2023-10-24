@@ -1,0 +1,169 @@
+version: '3.8'
+
+services:
+  weather-database:
+    container_name: "weather-database"
+    image: postgres:16.0
+    restart: always
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    volumes:
+      - weather-volume:/var/lib/postgresql/data
+      - ./databases/weather-service-backup.sql:/docker-entrypoint-initdb.d/weather-service-backup.sql
+    ports:
+      - "5432:5432"
+    expose:
+      - "5432"
+  disaster-database:
+    container_name: "disaster-database"
+    image: postgres:16.0
+    restart: always
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    volumes:
+      - disaster-volume:/var/lib/postgresql/data
+      - ./databases/disaster-service-backup.sql:/docker-entrypoint-initdb.d/disaster-service-backup.sql
+    ports:
+      - "5433:5432"
+    expose:
+      - "5432"
+  service_discovery:
+    container_name: "service_discovery"
+    image: thesalbert/service-discovery:latest
+    build: ./service-discovery
+    restart: always
+    ports:
+      - "9000:9000"
+    environment:
+      - SERVICEDISC_PORT=9000
+      - SERVICEDISC_HOSTNAME=service_discovery
+  weather_1:
+    container_name: "weather-service_0"
+    image: thesalbert/weather-service:latest
+    build: ./weather-service
+    ports:
+      - "9001:9001"
+    depends_on:
+      weather-database:
+        condition: service_healthy
+      service_discovery:
+        condition: service_started
+    environment:
+      - WEATHER_PORT=9001
+      - WEATHER_HOSTNAME=weather-service-0
+      - SERVICEDISC_HOSTNAME=service_discovery
+      - SERVICEDISC_PORT=9000
+      - DB_HOST=weather-database
+      - DB_PORT=5432
+  weather_2:
+    container_name: "weather-service_1"
+    image: thesalbert/weather-service:latest
+    build: ./weather-service
+    ports:
+      - "9002:9002"
+    depends_on:
+      weather-database:
+        condition: service_healthy
+      service_discovery:
+        condition: service_started
+    environment:
+      - WEATHER_PORT=9002
+      - WEATHER_HOSTNAME=weather-service-1
+      - SERVICEDISC_HOSTNAME=service_discovery  
+      - SERVICEDISC_PORT=9000
+      - DB_HOST=weather-database
+      - DB_PORT=5432
+  weather_3:
+    container_name: "weather-service_2"
+    image: thesalbert/weather-service:latest
+    build: ./weather-service
+    ports:
+      - "9003:9003"
+    depends_on:
+      weather-database:
+        condition: service_healthy
+      service_discovery:
+        condition: service_started
+    environment:
+      - WEATHER_PORT=9003
+      - WEATHER_HOSTNAME=weather-service-2
+      - SERVICEDISC_HOSTNAME=service_discovery
+      - SERVICEDISC_PORT=9000
+      - DB_HOST=weather-database
+      - DB_PORT=5432
+  disaster_1:
+    container_name: "disaster-service_0"
+    image: thesalbert/disaster-service:latest
+    build: ./disaster-service
+    ports:
+      - "9091:9091"
+    depends_on:
+      disaster-database:
+        condition: service_healthy
+      service_discovery:
+        condition: service_started
+    environment:
+      - DISASTER_PORT=9091
+      - DISASTER_HOSTNAME=disaster-service-0
+      - SERVICEDISC_HOSTNAME=service_discovery
+      - SERVICEDISC_PORT=9000
+      - DB_HOST=disaster-database
+      - DB_PORT=5432
+  disaster_2:
+    container_name: "disaster-service_1"
+    image: thesalbert/disaster-service:latest
+    build: ./disaster-service
+    ports:
+      - "9092:9092"
+    depends_on:
+      disaster-database:
+        condition: service_healthy
+      service_discovery:
+        condition: service_started
+    environment:
+      - DISASTER_PORT=9092
+      - DISASTER_HOSTNAME=disaster-service-1
+      - SERVICEDISC_HOSTNAME=service_discovery
+      - SERVICEDISC_PORT=9000
+      - DB_HOST=disaster-database
+      - DB_PORT=5432
+  disaster_3:
+    container_name: "disaster-service_2"
+    image: thesalbert/disaster-service:latest
+    build: ./disaster-service
+    ports:
+      - "9093:9093"
+    depends_on:
+      disaster-database:
+        condition: service_healthy
+      service_discovery:
+        condition: service_started
+    environment:
+      - DISASTER_PORT=9093
+      - DISASTER_HOSTNAME=disaster-service-2
+      - SERVICEDISC_HOSTNAME=service_discovery
+      - SERVICEDISC_PORT=9000
+      - DB_HOST=disaster-database
+      - DB_PORT=5432
+  gateway:
+    container_name: "gateway"
+    image: thesalbert/gateway:latest
+    build: ./gateway
+    ports:
+      - "9090:9090"
+    depends_on:
+      - service_discovery
+    environment:
+      - GATEWAY_PORT=9090
+      - SERVICEDISC_HOSTNAME=service_discovery
+      - SERVICEDISC_PORT=9000
+      - TIMEOUT=0.05
+      - FAILURE_LIMIT=3
+      - FAILURE_THRESHOLD=3.5
+volumes:
+  weather-volume:
+    driver: local
+  disaster-volume:
+    driver: local

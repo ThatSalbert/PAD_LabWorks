@@ -1,11 +1,12 @@
 /weather-service/.idea
-/weather-service/Templates(TO_DELETE).txt
 /disaster-service/.idea
-/disaster-service/Templates(TO_DELETE).txt
 /gateway/.idea
 /service-discovery/.idea
-/service-discovery/services.json
 /gateway/.vscode
 /service-discovery/.vscode
 /weather-service/.vscode
 /disaster-service/.vscode
+/gateway/cache/__pycache__
+/gateway/circuit_breaker/__pycache__
+/gateway/load_balancer/__pycache__
+.env

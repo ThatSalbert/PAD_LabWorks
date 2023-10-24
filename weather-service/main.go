@@ -4,12 +4,13 @@ import (
 	"bytes"
 	"database/sql"
 	"encoding/json"
-	"github.com/gorilla/mux"
 	"log"
 	"net/http"
+	"os"
 	"strconv"
 	"weather-service/database"
 	"weather-service/payload"
+	"github.com/gorilla/mux"
 )
 
 var db *sql.DB
@@ -17,12 +18,21 @@ var err error
 
 var maxConnections = 10
 
-func registerService(HOSTNAME string, PORT string, SERVICE_NAME string) {
+var (
+	WEATHER_HOSTNAME 		= os.Getenv("WEATHER_HOSTNAME")
+	WEATHER_PORT     		= os.Getenv("WEATHER_PORT")
+	SERVICEDISC_HOSTNAME 	= os.Getenv("SERVICEDISC_HOSTNAME")
+	SERVICEDISC_PORT     	= os.Getenv("SERVICEDISC_PORT")
+	DB_HOSTNAME 			= os.Getenv("DB_HOSTNAME")
+	DB_PORT     			= os.Getenv("DB_PORT")
+)
+
+func registerService(WEATHER_HOSTNAME string, WEATHER_PORT string, SERVICEDISC_HOSTNAME string, SERVICEDISC_PORT string) {
 	var jsonRequest = []byte(`{
-		"service_name": "` + SERVICE_NAME + `",
-		"service_address": "http://` + HOSTNAME + `:` + PORT + `"
+		"service_name": "` + WEATHER_HOSTNAME + `",
+		"service_address": "http://` + WEATHER_HOSTNAME + `:` + WEATHER_PORT + `"
 	}`)
-	response, err := http.Post("http://localhost:8002/register", "application/json", bytes.NewBuffer(jsonRequest))
+	response, err := http.Post("http://"+SERVICEDISC_HOSTNAME+":"+SERVICEDISC_PORT+"/register", "application/json", bytes.NewBuffer(jsonRequest))
 	if err != nil {
 		log.Fatal(err)
 	} else {
@@ -37,7 +47,7 @@ func registerService(HOSTNAME string, PORT string, SERVICE_NAME string) {
 }
 
 func main() {
-	db, err = database.ConnectToDB(maxConnections)
+	db, err = database.ConnectToDB(maxConnections, DB_HOSTNAME, DB_PORT)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -65,9 +75,9 @@ func main() {
 	//PUT /weather/update_data?type={type}
 	router.HandleFunc("/weather/update_data", UpdateWeatherData).Methods("PUT").Queries("type", "{type}")
 
-	registerService("localhost", "8000", "weather")
+	registerService(WEATHER_HOSTNAME, WEATHER_PORT, "weather-service")
 
-	log.Fatal(http.ListenAndServe(":8000", router))
+	log.Fatal(http.ListenAndServe(":"+WEATHER_PORT, router))
 
 }
 func GetLocations(w http.ResponseWriter, r *http.Request) {

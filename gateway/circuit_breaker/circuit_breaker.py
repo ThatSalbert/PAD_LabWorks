@@ -3,13 +3,14 @@ import time
 from functools import wraps
 from flask import jsonify
 import requests
+import os
 
 def circuit_breaker(f):
     failures = 0
     last_failure_time = 0
-    TASK_TIMEOUT = 0.05
-    FAILURE_LIMIT = 3
-    FAILURE_THRESHOLD = 3.5
+    TASK_TIMEOUT = os.getenv('TASK_TIMEOUT')
+    FAILURE_LIMIT = os.getenv('FAILURE_LIMIT')
+    FAILURE_THRESHOLD = os.getenv('FAILURE_THRESHOLD')
 
     @wraps(f)
     def wrapper(*args, **kwargs):
