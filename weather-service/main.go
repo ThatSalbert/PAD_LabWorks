@@ -128,7 +128,30 @@ func GetCurrentWeather(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
-	weather, funcCodeErr, funcErr := database.GetCurrentWeather(country, city, db)
+
+	list, err := http.Get("http://localhost:8001/disaster/list?country=" + country + "&city=" + city + "&active=true")
+	if err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		_, err := w.Write([]byte(`{"message": "internal server error"}`))
+		if err != nil {
+			return
+		}
+		return
+	}
+	var disasterList []payload.Disaster
+	err = json.NewDecoder(list.Body).Decode(&disasterList)
+	if err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		_, err := w.Write([]byte(`{"message": "internal server error"}`))
+		if err != nil {
+			return
+		}
+		return
+	}
+	weather, funcCodeErr, funcErr := database.GetCurrentWeather(country, city, disasterList, db)
+
 	switch funcCodeErr {
 	case 200:
 		w.Header().Set("Content-Type", "application/json")

@@ -6,7 +6,7 @@ api = Flask(__name__)
 services = {}
 
 
-@api.route('/register', methods=['POST'])
+@api.route('/register', methods = ['POST'])
 def add_service():
     data = request.get_json()
     service_name = data['service_name']
@@ -20,7 +20,7 @@ def add_service():
         return response, 409
 
 
-@api.route('/register', methods=['PUT'])
+@api.route('/register', methods = ['PUT'])
 def update_service():
     data = request.get_json()
     service_name = data['service_name']
@@ -34,7 +34,7 @@ def update_service():
         return response, 404
 
 
-@api.route('/remove', methods=['DELETE'])
+@api.route('/remove', methods = ['DELETE'])
 def remove_service():
     service_name = request.args.get('service_name')
     if service_name in services:
@@ -46,7 +46,7 @@ def remove_service():
         return response, 404
 
 
-@api.route('/get_service', methods=['GET'])
+@api.route('/get_service', methods = ['GET'])
 def get_service():
     service_name = request.args.get('service_name')
     if service_name in services:
@@ -57,7 +57,7 @@ def get_service():
         return response, 404
 
 
-@api.route('/get_services', methods=['GET'])
+@api.route('/get_services', methods = ['GET'])
 def get_services():
     if len(services) == 0:
         return jsonify({'message': 'No services registered'}), 209
@@ -66,4 +66,4 @@ def get_services():
 
 
 if __name__ == '__main__':
-    api.run(host='localhost', port=8002)
+    api.run(host = 'localhost', port = 8002)

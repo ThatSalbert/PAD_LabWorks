@@ -72,7 +72,7 @@ func GetCities(country string, db *sql.DB) (locations []payload.Location, errCod
 	}
 }
 
-func GetCurrentWeather(country string, city string, db *sql.DB) (weather []payload.CurrentWeatherResponse, errCode int16, err error) {
+func GetCurrentWeather(country string, city string, disasterList []payload.Disaster, db *sql.DB) (weather []payload.CurrentWeatherResponse, errCode int16, err error) {
 	locationID, locationErrorCode, locationError := GetLocationID(country, city, db)
 	if locationID == nil {
 		return nil, locationErrorCode, locationError
@@ -99,6 +99,15 @@ func GetCurrentWeather(country string, city string, db *sql.DB) (weather []paylo
 		if currentWeather.Location.City == "" {
 			return nil, 404, errors.New("no current weather found")
 		} else {
+			if len(disasterList) != 0 {
+				if disasterList[0].DisasterName != "" {
+					currentWeather.Disasters = disasterList
+				} else {
+					currentWeather.Disasters = nil
+				}
+			} else {
+				currentWeather.Disasters = nil
+			}
 			weather = append(weather, currentWeather)
 			return weather, 200, nil
 		}
