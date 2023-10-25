@@ -4,13 +4,13 @@ import (
 	"bytes"
 	"database/sql"
 	"encoding/json"
+	"github.com/gorilla/mux"
 	"log"
 	"net/http"
 	"os"
 	"strconv"
 	"weather-service/database"
 	"weather-service/payload"
-	"github.com/gorilla/mux"
 )
 
 var db *sql.DB
@@ -19,12 +19,12 @@ var err error
 var maxConnections = 10
 
 var (
-	WEATHER_HOSTNAME 		= os.Getenv("WEATHER_HOSTNAME")
-	WEATHER_PORT     		= os.Getenv("WEATHER_PORT")
-	SERVICEDISC_HOSTNAME 	= os.Getenv("SERVICEDISC_HOSTNAME")
-	SERVICEDISC_PORT     	= os.Getenv("SERVICEDISC_PORT")
-	DB_HOSTNAME 			= os.Getenv("DB_HOSTNAME")
-	DB_PORT     			= os.Getenv("DB_PORT")
+	WEATHER_HOSTNAME     = os.Getenv("WEATHER_HOSTNAME")
+	WEATHER_PORT         = os.Getenv("WEATHER_PORT")
+	SERVICEDISC_HOSTNAME = os.Getenv("SERVICEDISC_HOSTNAME")
+	SERVICEDISC_PORT     = os.Getenv("SERVICEDISC_PORT")
+	DB_HOST              = os.Getenv("DB_HOST")
+	DB_PORT              = os.Getenv("DB_PORT")
 )
 
 func registerService(WEATHER_HOSTNAME string, WEATHER_PORT string, SERVICEDISC_HOSTNAME string, SERVICEDISC_PORT string) {
@@ -47,7 +47,7 @@ func registerService(WEATHER_HOSTNAME string, WEATHER_PORT string, SERVICEDISC_H
 }
 
 func main() {
-	db, err = database.ConnectToDB(maxConnections, DB_HOSTNAME, DB_PORT)
+	db, err = database.ConnectToDB(maxConnections, DB_HOST, DB_PORT)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -75,7 +75,7 @@ func main() {
 	//PUT /weather/update_data?type={type}
 	router.HandleFunc("/weather/update_data", UpdateWeatherData).Methods("PUT").Queries("type", "{type}")
 
-	registerService(WEATHER_HOSTNAME, WEATHER_PORT, "weather-service")
+	registerService(WEATHER_HOSTNAME, WEATHER_PORT, SERVICEDISC_HOSTNAME, SERVICEDISC_PORT)
 
 	log.Fatal(http.ListenAndServe(":"+WEATHER_PORT, router))
 

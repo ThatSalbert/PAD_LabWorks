@@ -10,7 +10,7 @@ services:
       - POSTGRES_PASSWORD=postgres
     volumes:
       - weather-volume:/var/lib/postgresql/data
-      - ./databases/weather-service-backup.sql:/docker-entrypoint-initdb.d/weather-service-backup.sql
+      - ./databases/weather-service-database.sql:/docker-entrypoint-initdb.d/weather-service-database.sql
     ports:
       - "5432:5432"
     expose:
@@ -24,7 +24,7 @@ services:
       - POSTGRES_PASSWORD=postgres
     volumes:
       - disaster-volume:/var/lib/postgresql/data
-      - ./databases/disaster-service-backup.sql:/docker-entrypoint-initdb.d/disaster-service-backup.sql
+      - ./databases/disaster-service-database.sql:/docker-entrypoint-initdb.d/disaster-service-database.sql
     ports:
       - "5433:5432"
     expose:
@@ -47,7 +47,7 @@ services:
       - "9001:9001"
     depends_on:
       weather-database:
-        condition: service_healthy
+        condition: service_started
       service_discovery:
         condition: service_started
     environment:
@@ -65,7 +65,7 @@ services:
       - "9002:9002"
     depends_on:
       weather-database:
-        condition: service_healthy
+        condition: service_started
       service_discovery:
         condition: service_started
     environment:
@@ -83,7 +83,7 @@ services:
       - "9003:9003"
     depends_on:
       weather-database:
-        condition: service_healthy
+        condition: service_started
       service_discovery:
         condition: service_started
     environment:
@@ -101,7 +101,7 @@ services:
       - "9091:9091"
     depends_on:
       disaster-database:
-        condition: service_healthy
+        condition: service_started
       service_discovery:
         condition: service_started
     environment:
@@ -119,7 +119,7 @@ services:
       - "9092:9092"
     depends_on:
       disaster-database:
-        condition: service_healthy
+        condition: service_started
       service_discovery:
         condition: service_started
     environment:
@@ -137,7 +137,7 @@ services:
       - "9093:9093"
     depends_on:
       disaster-database:
-        condition: service_healthy
+        condition: service_started
       service_discovery:
         condition: service_started
     environment:

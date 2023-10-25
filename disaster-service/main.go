@@ -24,7 +24,7 @@ var (
 	DISASTER_PORT     		= os.Getenv("DISASTER_PORT")
 	SERVICEDISC_HOSTNAME 	= os.Getenv("SERVICEDISC_HOSTNAME")
 	SERVICEDISC_PORT     	= os.Getenv("SERVICEDISC_PORT")
-	DB_HOSTNAME	 			= os.Getenv("DB_HOSTNAME")
+	DB_HOST	 				= os.Getenv("DB_HOST")
 	DB_PORT     			= os.Getenv("DB_PORT")
 )
 
@@ -48,7 +48,7 @@ func registerService(DISASTER_HOSTNAME string, DISASTER_PORT string, SERVICEDISC
 }
 
 func main() {
-	db, err = database.ConnectToDB(maxConnections, DB_HOSTNAME, DB_PORT)
+	db, err = database.ConnectToDB(maxConnections, DB_HOST, DB_PORT)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -73,7 +73,7 @@ func main() {
 	//PUT /disaster/alert?alert_id={alert_id}
 	router.HandleFunc("/disaster/alert", PutDisasterAlert).Methods("PUT").Queries("alert_id", "{alert_id}")
 
-	registerService(DISASTER_HOSTNAME, DISASTER_PORT, "disaster-service")
+	registerService(DISASTER_HOSTNAME, DISASTER_PORT, SERVICEDISC_HOSTNAME, SERVICEDISC_PORT)
 
 	log.Fatal(http.ListenAndServe(":"+DISASTER_PORT, router))
 }

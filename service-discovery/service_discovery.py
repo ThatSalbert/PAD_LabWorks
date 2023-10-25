@@ -27,3 +27,9 @@ def get_service():
     else:
         response = jsonify({'message': 'Service not registered'})
         return response, 404
+    
+
+@api.route('/get_all_services', methods = ['GET'])
+def get_all_services():
+    response = jsonify(services)
+    return response, 200

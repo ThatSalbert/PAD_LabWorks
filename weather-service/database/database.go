@@ -3,17 +3,21 @@ package database
 import (
 	"database/sql"
 	"errors"
+	"fmt"
 	_ "github.com/lib/pq"
 	"log"
 	"time"
 	"weather-service/payload"
 )
 
-func ConnectToDB(maxConnections int, DB_HOSTNAME string, DB_PORT string) (db *sql.DB, err error) {
-	db, err = sql.Open("postgres", "user=postgres password=postgres, dbname=weather-service-database host="+DB_HOSTNAME+" port="+DB_PORT+" sslmode=disable")
+func ConnectToDB(maxConnections int, DB_HOST string, DB_PORT string) (db *sql.DB, err error) {
+	db, err = sql.Open("postgres", "host="+DB_HOST+" port="+DB_PORT+" user=postgres password=postgres dbname=weather-service-database sslmode=disable")
 	if db == nil {
+		log.Fatal("Could not connect to database")
 		return nil, err
 	}
+
+	fmt.Println("Connected to database")
 
 	db.SetMaxOpenConns(maxConnections)
 	db.SetMaxIdleConns(maxConnections / 2)
@@ -24,6 +28,7 @@ func ConnectToDB(maxConnections int, DB_HOSTNAME string, DB_PORT string) (db *sq
 func GetLocationID(country string, city string, db *sql.DB) (locationID *int, errCode int16, err error) {
 	rows, err := db.Query("SELECT location_id FROM location_table WHERE UPPER(country) LIKE UPPER($1) AND UPPER(city) LIKE UPPER($2);", country, city)
 	if err != nil {
+		fmt.Println(err)
 		return nil, 500, errors.New("internal server error")
 	}
 	defer func(rows *sql.Rows) {
@@ -36,6 +41,7 @@ func GetLocationID(country string, city string, db *sql.DB) (locationID *int, er
 		return nil, 404, errors.New("location not found")
 	} else {
 		if err = rows.Scan(&locationID); err != nil {
+			fmt.Println(err)
 			return nil, 500, errors.New("internal server error")
 		} else {
 			return locationID, 200, nil
@@ -46,6 +52,7 @@ func GetLocationID(country string, city string, db *sql.DB) (locationID *int, er
 func GetCities(country string, db *sql.DB) (locations []payload.Location, errCode int16, err error) {
 	rows, err := db.Query("SELECT city, longitude, latitude FROM location_table WHERE UPPER(country) LIKE UPPER($1)", country)
 	if err != nil {
+		fmt.Println(err)
 		return nil, 500, errors.New("internal server error")
 	}
 	defer func(rows *sql.Rows) {
@@ -57,6 +64,7 @@ func GetCities(country string, db *sql.DB) (locations []payload.Location, errCod
 	for rows.Next() {
 		var location payload.Location
 		if err = rows.Scan(&location.City, &location.Longitude, &location.Latitude); err != nil {
+			fmt.Println(err)
 			return nil, 500, errors.New("internal server error")
 		}
 		if location.City != "" {
@@ -79,6 +87,7 @@ func GetCurrentWeather(country string, city string, disasterList []payload.Disas
 	} else {
 		rows, err := db.Query("SELECT lt.country, lt.city, lt.longitude, lt.latitude, cwt.timestamp, cwt.temperature, cwt.humidity, cwt.weather_condition FROM current_weather_table AS cwt INNER JOIN location_table AS lt ON lt.location_id = cwt.location_id WHERE cwt.location_id = $1;", locationID)
 		if err != nil {
+			fmt.Println(err)
 			return nil, 500, errors.New("internal server error")
 		}
 		defer func(rows *sql.Rows) {
@@ -93,6 +102,7 @@ func GetCurrentWeather(country string, city string, disasterList []payload.Disas
 		var currentWeather payload.CurrentWeatherResponse
 		for rows.Next() {
 			if err = rows.Scan(&currentWeather.Country, &currentWeather.Location.City, &currentWeather.Location.Longitude, &currentWeather.Location.Latitude, &currentWeather.Timestamp, &currentWeather.Temperature, &currentWeather.Humidity, &currentWeather.WeatherCondition); err != nil {
+				fmt.Println(err)
 				return nil, 500, errors.New("internal server error")
 			}
 		}
@@ -122,6 +132,7 @@ func GetForecastWeather(country string, city string, db *sql.DB) (forecast []pay
 	} else {
 		rows, err := db.Query("SELECT lt.country, lt.city, lt.longitude, lt.latitude, fwt.timestamp, fwt.temperature_high, fwt.temperature_low, fwt.humidity, fwt.weather_condition FROM forecast_weather_table AS fwt INNER JOIN location_table AS lt ON lt.location_id = fwt.location_id WHERE fwt.location_id = $1 AND fwt.timestamp >= NOW() AND fwt.timestamp <= NOW()::DATE + INTERVAL '5 days' ORDER BY lt.location_id, fwt.timestamp;", locationID)
 		if err != nil {
+			fmt.Println(err)
 			return nil, 500, errors.New("internal server error")
 		}
 		defer func(rows *sql.Rows) {
@@ -137,6 +148,7 @@ func GetForecastWeather(country string, city string, db *sql.DB) (forecast []pay
 		for rows.Next() {
 			var forecastWeatherDay payload.ForecastWeatherDay
 			if err = rows.Scan(&forecastWeather.Country, &forecastWeather.Location.City, &forecastWeather.Location.Longitude, &forecastWeather.Location.Latitude, &forecastWeatherDay.Timestamp, &forecastWeatherDay.TemperatureHigh, &forecastWeatherDay.TemperatureLow, &forecastWeatherDay.Humidity, &forecastWeatherDay.WeatherCondition); err != nil {
+				fmt.Println(err)
 				return nil, 500, errors.New("internal server error")
 			}
 			forecastWeather.ForecastWeatherDays = append(forecastWeather.ForecastWeatherDays, forecastWeatherDay)
@@ -157,6 +169,7 @@ func AddCurrentWeather(weather payload.AddDataWeather, db *sql.DB) (weatherID *i
 	} else {
 		row, err := db.Query("INSERT INTO current_weather_table (location_id, timestamp, temperature, humidity, weather_condition) SELECT $1, $2, $3, $4, $5 WHERE NOT EXISTS (SELECT 1 FROM current_weather_table WHERE location_id = $1 AND timestamp = $2) RETURNING weather_id;", locationID, weather.Timestamp, weather.Temperature, weather.Humidity, weather.WeatherCondition)
 		if err != nil {
+			fmt.Println(err)
 			return nil, 500, errors.New("internal server error")
 		}
 		defer func(row *sql.Rows) {
@@ -169,6 +182,7 @@ func AddCurrentWeather(weather payload.AddDataWeather, db *sql.DB) (weatherID *i
 			return nil, 409, errors.New("weather already exists")
 		} else {
 			if err = row.Scan(&weatherID); err != nil {
+				fmt.Println(err)
 				return nil, 500, errors.New("internal server error")
 			} else {
 				return weatherID, 200, nil
@@ -184,6 +198,7 @@ func AddForecastWeather(weather payload.AddDataForecast, db *sql.DB) (forecastID
 	} else {
 		row, err := db.Query("INSERT INTO forecast_weather_table (location_id, timestamp, temperature_high, temperature_low, humidity, weather_condition) SELECT $1, $2, $3, $4, $5, $6 WHERE NOT EXISTS (SELECT 1 FROM forecast_weather_table WHERE location_id = $1 AND timestamp = $2) RETURNING forecast_id;", locationID, weather.Timestamp, weather.TemperatureHigh, weather.TemperatureLow, weather.Humidity, weather.WeatherCondition)
 		if err != nil {
+			fmt.Println(err)
 			return nil, 500, errors.New("internal server error")
 		}
 		defer func(row *sql.Rows) {
@@ -196,6 +211,7 @@ func AddForecastWeather(weather payload.AddDataForecast, db *sql.DB) (forecastID
 			return nil, 409, errors.New("weather already exists")
 		} else {
 			if err = row.Scan(&forecastID); err != nil {
+				fmt.Println(err)
 				return nil, 500, errors.New("internal server error")
 			} else {
 				return forecastID, 200, nil
@@ -211,6 +227,7 @@ func UpdateWeather(weatherID int64, weather payload.UpdateDataWeather, db *sql.D
 	} else {
 		row, err := db.Query("UPDATE current_weather_table SET location_id = $1, timestamp = $2, temperature = $3, humidity = $4, weather_condition = $5 WHERE weather_id = $6 RETURNING *;", locationID, weather.Timestamp, weather.Temperature, weather.Humidity, weather.WeatherCondition, weatherID)
 		if err != nil {
+			fmt.Println(err)
 			return 500, errors.New("internal server error")
 		}
 		defer func(row *sql.Rows) {
@@ -234,6 +251,7 @@ func UpdateForecast(forecastID int64, weather payload.UpdateDataForecast, db *sq
 	} else {
 		row, err := db.Query("UPDATE forecast_weather_table SET location_id = $1, timestamp = $2, temperature_high = $3, temperature_low = $4, humidity = $5, weather_condition = $6 WHERE forecast_id = $7 RETURNING *;", locationID, weather.Timestamp, weather.TemperatureHigh, weather.TemperatureLow, weather.Humidity, weather.WeatherCondition, forecastID)
 		if err != nil {
+			fmt.Println(err)
 			return 500, errors.New("internal server error")
 		}
 		defer func(row *sql.Rows) {

@@ -10,11 +10,14 @@ import (
 	"time"
 )
 
-func ConnectToDB(maxConnections int, DB_HOSTNAME string, DB_PORT string) (db *sql.DB, err error) {
-	db, err = sql.Open("postgres", "user=postgres password=postgres, dbname=disaster-service-database host="+DB_HOSTNAME+" port="+DB_PORT+" sslmode=disable")
+func ConnectToDB(maxConnections int, DB_HOST string, DB_PORT string) (db *sql.DB, err error) {
+	db, err = sql.Open("postgres", "user=postgres password=postgres dbname=disaster-service-database host="+DB_HOST+" port="+DB_PORT+" sslmode=disable")
 	if db == nil {
+		log.Fatal("Could not connect to database")
 		return nil, err
 	}
+
+	fmt.Println("Connected to database")
 
 	db.SetMaxOpenConns(maxConnections)
 	db.SetMaxIdleConns(maxConnections / 2)
@@ -25,6 +28,7 @@ func ConnectToDB(maxConnections int, DB_HOSTNAME string, DB_PORT string) (db *sq
 func GetLocationID(country string, city string, db *sql.DB) (locationID *int, errCode int16, err error) {
 	rows, err := db.Query("SELECT location_id FROM location_table WHERE UPPER(country) LIKE UPPER($1) AND UPPER(city) LIKE UPPER($2);", country, city)
 	if err != nil {
+		fmt.Println(err)
 		return nil, 500, errors.New("internal server error")
 	}
 	defer func(rows *sql.Rows) {
@@ -37,6 +41,7 @@ func GetLocationID(country string, city string, db *sql.DB) (locationID *int, er
 		return nil, 404, errors.New("location not found")
 	} else {
 		if err = rows.Scan(&locationID); err != nil {
+			fmt.Println(err)
 			return nil, 500, errors.New("internal server error")
 		} else {
 			return locationID, 200, nil
@@ -47,6 +52,7 @@ func GetLocationID(country string, city string, db *sql.DB) (locationID *int, er
 func GetDisasterTypeID(disasterName string, db *sql.DB) (disasterTypeID *int, errCode int16, err error) {
 	rows, err := db.Query("SELECT disaster_type_id FROM disaster_type_table WHERE UPPER(disaster_name) LIKE UPPER($1)", disasterName)
 	if err != nil {
+		fmt.Println(err)
 		return nil, 500, errors.New("internal server error")
 	}
 	defer func(rows *sql.Rows) {
@@ -59,6 +65,7 @@ func GetDisasterTypeID(disasterName string, db *sql.DB) (disasterTypeID *int, er
 		return nil, 404, errors.New("disaster type not found")
 	} else {
 		if err = rows.Scan(&disasterTypeID); err != nil {
+			fmt.Println(err)
 			return nil, 500, errors.New("internal server error")
 		} else {
 			return disasterTypeID, 200, nil
@@ -69,6 +76,7 @@ func GetDisasterTypeID(disasterName string, db *sql.DB) (disasterTypeID *int, er
 func GetDisasterTypes(db *sql.DB) (types []payload.DisasterType, errCode int16, err error) {
 	rows, err := db.Query("SELECT disaster_name, disaster_description FROM disaster_type_table")
 	if err != nil {
+		fmt.Println(err)
 		return nil, 500, errors.New("internal server error")
 	}
 	defer func(rows *sql.Rows) {
@@ -80,6 +88,7 @@ func GetDisasterTypes(db *sql.DB) (types []payload.DisasterType, errCode int16, 
 	for rows.Next() {
 		var disasterType payload.DisasterType
 		if err = rows.Scan(&disasterType.DisasterName, &disasterType.DisasterDescription); err != nil {
+			fmt.Println(err)
 			return nil, 500, errors.New("internal server error")
 		}
 		if disasterType.DisasterName != "" {
@@ -99,6 +108,7 @@ func GetDisasterList(db *sql.DB, country string, city string, active bool) (disa
 		if active {
 			rows, err := db.Query("SELECT lt.country, lt.city, dtt.disaster_name, dlt.timestamp_start, dlt.timestamp_end, dlt.severity, dlt.description FROM disaster_list_table dlt INNER JOIN disaster_type_table dtt ON dtt.disaster_type_id = dlt.disaster_type_id INNER JOIN location_table lt ON lt.location_id = dlt.location_id WHERE dlt.location_id = $1 AND dlt.timestamp_end >= NOW()", locationID)
 			if err != nil {
+				fmt.Println(err)
 				return nil, 500, errors.New("internal server error")
 			}
 			defer func(rows *sql.Rows) {
@@ -112,6 +122,7 @@ func GetDisasterList(db *sql.DB, country string, city string, active bool) (disa
 				var disaster payload.Disaster
 				err := rows.Scan(&disasterListElement.Country, &disasterListElement.City, &disaster.DisasterName, &disaster.DisasterTimestampStart, &disaster.DisasterTimestampEnd, &disaster.DisasterSeverity, &disaster.DisasterDescription)
 				if err != nil {
+					fmt.Println(err)
 					return nil, 500, errors.New("internal server error")
 				}
 				disasterTypeID, disasterTypeIDErrCode, disasterTypeIDErr := GetDisasterTypeID(disaster.DisasterName, db)
@@ -130,6 +141,7 @@ func GetDisasterList(db *sql.DB, country string, city string, active bool) (disa
 		} else {
 			rows, err := db.Query("SELECT lt.country, lt.city, dtt.disaster_name, dlt.timestamp_start, dlt.timestamp_end, dlt.severity, dlt.description FROM disaster_list_table dlt INNER JOIN disaster_type_table dtt ON dtt.disaster_type_id = dlt.disaster_type_id INNER JOIN location_table lt ON lt.location_id = dlt.location_id WHERE dlt.location_id = $1", locationID)
 			if err != nil {
+				fmt.Println(err)
 				return nil, 500, errors.New("internal server error")
 			}
 			defer func(rows *sql.Rows) {
@@ -143,6 +155,7 @@ func GetDisasterList(db *sql.DB, country string, city string, active bool) (disa
 				var disaster payload.Disaster
 				err := rows.Scan(&disasterListElement.Country, &disasterListElement.City, &disaster.DisasterName, &disaster.DisasterTimestampStart, &disaster.DisasterTimestampEnd, &disaster.DisasterSeverity, &disaster.DisasterDescription)
 				if err != nil {
+					fmt.Println(err)
 					return nil, 500, errors.New("internal server error")
 				}
 				disasterTypeID, disasterTypeIDErrCode, disasterTypeIDErr := GetDisasterTypeID(disaster.DisasterName, db)
@@ -206,6 +219,7 @@ func UpdateAlert(alertID int, alert payload.UpdateAlert, db *sql.DB) (errCode in
 		} else {
 			rows, err := db.Query("UPDATE disaster_list_table SET location_id = $1, disaster_type_id = $2, timestamp_start = $3, timestamp_end = $4, severity = $5, description = $6 WHERE disaster_id = $7 RETURNING *;", locationID, disasterTypeID, alert.TimestampStart, alert.TimestampEnd, alert.Severity, alert.Description, alertID)
 			if err != nil {
+				fmt.Println(err)
 				return 500, errors.New("internal server error")
 			}
 			defer func(rows *sql.Rows) {

@@ -8,8 +8,8 @@ RUN pip install --no-cache-dir --upgrade -r ./requirements.txt
 
 COPY . .
 
-EXPOSE ${SERVICEDISC_PORT}
+EXPOSE 9000
 
 ENV FLASK_APP=service_discovery.py
 
-CMD ["python", "-m", "flask", "run", "--host=0.0.0.0", "--port=$SERVICEDISC_PORT"]
+CMD ["python", "-m", "flask", "run", "--host=0.0.0.0", "--port=9000"]

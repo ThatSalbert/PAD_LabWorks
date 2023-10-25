@@ -8,9 +8,9 @@ import os
 def circuit_breaker(f):
     failures = 0
     last_failure_time = 0
-    TASK_TIMEOUT = os.getenv('TASK_TIMEOUT')
-    FAILURE_LIMIT = os.getenv('FAILURE_LIMIT')
-    FAILURE_THRESHOLD = os.getenv('FAILURE_THRESHOLD')
+    TASK_TIMEOUT = float(os.getenv('TIMEOUT'))
+    FAILURE_LIMIT = int(os.getenv('FAILURE_LIMIT'))
+    FAILURE_THRESHOLD = float(os.getenv('FAILURE_THRESHOLD'))
 
     @wraps(f)
     def wrapper(*args, **kwargs):

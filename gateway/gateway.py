@@ -8,7 +8,8 @@ import os
 from circuit_breaker.circuit_breaker import circuit_breaker
 from load_balancer.load_balancer import load_balancer
 
-TASK_TIMEOUT = os.getenv('TASK_TIMEOUT')
+#TASK_TIMEOUT from string to float
+TASK_TIMEOUT = float(os.getenv('TIMEOUT'))
 SERVICEDISC_HOSTNAME = os.getenv('SERVICEDISC_HOSTNAME')
 SERVICEDISC_PORT = os.getenv('SERVICEDISC_PORT')
 
@@ -30,10 +31,11 @@ def get_locations():
     except requests.exceptions.Timeout:
         raise requests.exceptions.Timeout
     service_address = response_from_service_discovery.json()['service_address']
+    port = service_address.split(':')[2]
     if country is None:
-        url = service_address + '/weather/locations'
+        url = 'http://' + 'localhost' + ':' + port + '/weather/locations'
     else:
-        url = service_address + '/weather/locations?country=' + country
+        url = 'http://' + 'localhost' + ':' + port + '/weather/locations?country=' + country
     try:
         response_from_service = requests.get(url, timeout = TASK_TIMEOUT)
     except requests.exceptions.Timeout:

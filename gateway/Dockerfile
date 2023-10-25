@@ -8,8 +8,8 @@ RUN pip install --no-cache-dir --upgrade -r ./requirements.txt
 
 COPY . .
 
-EXPOSE ${GATWAY_PORT}
+EXPOSE 9090
 
 ENV FLASK_APP=gateway.py
 
-CMD ["python", "-m", "flask", "run", "--host=0.0.0.0", "--port=$GATEWAY_PORT"]
+CMD ["python", "-m", "flask", "run", "--host=0.0.0.0", "--port=9090"]
