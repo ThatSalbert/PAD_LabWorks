@@ -2,6 +2,7 @@
 	"info": {
 		"_postman_id": "bbb1547c-6768-4bb3-9b6f-0f18ea3b5889",
 		"name": "Weather API",
+		"description": "Variables of this collection:\n\n`country` - name of a country. The only available country is `Moldova`.\n\n`city` - name of a city found in the list of cities when requesting based on a country (Case sensitive).\n\n`type` - request type. Can be only `weather` or `forecast`.\n\n`active` - can only be `true` or `false`.\n\n`alert_id` - any number.",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
 		"_exporter_id": "23406818",
 		"_collection_link": "https://www.postman.com/blue-spaceship-121164/workspace/salbert-s-weather-api/collection/23406818-bbb1547c-6768-4bb3-9b6f-0f18ea3b5889?action=share&source=collection_link&creator=23406818"
@@ -804,6 +805,48 @@
 					"response": []
 				}
 			]
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "country",
+			"value": "Moldova"
+		},
+		{
+			"key": "city",
+			"value": "Chisinau"
+		},
+		{
+			"key": "type",
+			"value": "weather"
+		},
+		{
+			"key": "active",
+			"value": "true"
+		},
+		{
+			"key": "alert_id",
+			"value": "1"
 		}
 	]
 }
