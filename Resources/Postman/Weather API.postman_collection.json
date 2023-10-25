@@ -1,0 +1,809 @@
+{
+	"info": {
+		"_postman_id": "bbb1547c-6768-4bb3-9b6f-0f18ea3b5889",
+		"name": "Weather API",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "23406818",
+		"_collection_link": "https://www.postman.com/blue-spaceship-121164/workspace/salbert-s-weather-api/collection/23406818-bbb1547c-6768-4bb3-9b6f-0f18ea3b5889?action=share&source=collection_link&creator=23406818"
+	},
+	"item": [
+		{
+			"name": "Weather Module",
+			"item": [
+				{
+					"name": "GET Cities",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									""
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "localhost:9001/weather/locations?country={{country}}",
+							"host": [
+								"localhost"
+							],
+							"port": "9001",
+							"path": [
+								"weather",
+								"locations"
+							],
+							"query": [
+								{
+									"key": "country",
+									"value": "{{country}}"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "GET Current Weather",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "localhost:9001/weather/current?country={{country}}&city={{city}}",
+							"host": [
+								"localhost"
+							],
+							"port": "9001",
+							"path": [
+								"weather",
+								"current"
+							],
+							"query": [
+								{
+									"key": "country",
+									"value": "{{country}}"
+								},
+								{
+									"key": "city",
+									"value": "{{city}}"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "GET Forecast Weather",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "localhost:9001/weather/forecast?country={{country}}&city={{city}}",
+							"host": [
+								"localhost"
+							],
+							"port": "9001",
+							"path": [
+								"weather",
+								"forecast"
+							],
+							"query": [
+								{
+									"key": "country",
+									"value": "{{country}}"
+								},
+								{
+									"key": "city",
+									"value": "{{city}}"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "POST Weather Data",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"country\": \"Moldova\",\r\n    \"city\": \"Paris\",\r\n    \"timestamp\": \"2023-10-28 21:31:00\",\r\n    \"temperature\": 5,\r\n    \"humidity\": 20,\r\n    \"weather_condition\": \"Cloudy\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "localhost:9001/weather/add_data?type=weather",
+							"host": [
+								"localhost"
+							],
+							"port": "9001",
+							"path": [
+								"weather",
+								"add_data"
+							],
+							"query": [
+								{
+									"key": "type",
+									"value": "weather"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "POST Forecast Data",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"country\": \"Moldova\",\r\n    \"city\": \"Balti\",\r\n    \"timestamp\": \"2023-10-21 00:30:00\",\r\n    \"temperature_high\": 20,\r\n    \"temperature_low\": 5,\r\n    \"humidity\": 15,\r\n    \"weather_condition\": \"Sunny\"\r\n}\r\n\r\n// The hh:mm:ss on timestamp should be 00:00:00",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "localhost:9001/weather/add_data?type=forecast",
+							"host": [
+								"localhost"
+							],
+							"port": "9001",
+							"path": [
+								"weather",
+								"add_data"
+							],
+							"query": [
+								{
+									"key": "type",
+									"value": "forecast"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "PUT Weather Data",
+					"request": {
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"weather_id\": 12,\r\n    \"country\": \"Moldova\",\r\n    \"city\": \"Paris\",\r\n    \"timestamp\": \"2023-10-05 00:30:50\",\r\n    \"temperature\": 20,\r\n    \"humidity\": 15,\r\n    \"weather_condition\": \"Sunny\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "localhost:9001/weather/update_data?type=weather",
+							"host": [
+								"localhost"
+							],
+							"port": "9001",
+							"path": [
+								"weather",
+								"update_data"
+							],
+							"query": [
+								{
+									"key": "type",
+									"value": "weather"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "PUT Forecast Data",
+					"request": {
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"forecast_id\": 1,\r\n    \"country\": \"Moldova\",\r\n    \"city\": \"Baltii\",\r\n    \"timestamp\": \"2023-10-05 00:30:00\",\r\n    \"temperature_high\": 20,\r\n    \"temperature_low\": 5,\r\n    \"humidity\": 15,\r\n    \"weather_condition\": \"Sunny\"\r\n}\r\n\r\n// The hh:mm:ss on timestamp should be 00:00:00",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "localhost:9001/weather/update_data?type=forecast",
+							"host": [
+								"localhost"
+							],
+							"port": "9001",
+							"path": [
+								"weather",
+								"update_data"
+							],
+							"query": [
+								{
+									"key": "type",
+									"value": "forecast"
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			],
+			"description": "API requests for the Weather Module."
+		},
+		{
+			"name": "Natural Disaster Module",
+			"item": [
+				{
+					"name": "GET Disaster List",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "localhost:9091/disaster",
+							"host": [
+								"localhost"
+							],
+							"port": "9091",
+							"path": [
+								"disaster"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "GET Disaster List by Location",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "localhost:9091/disaster/list?country={{country}}&city={{city}}&active={{active}}",
+							"host": [
+								"localhost"
+							],
+							"port": "9091",
+							"path": [
+								"disaster",
+								"list"
+							],
+							"query": [
+								{
+									"key": "country",
+									"value": "{{country}}"
+								},
+								{
+									"key": "city",
+									"value": "{{city}}"
+								},
+								{
+									"key": "active",
+									"value": "{{active}}"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "POST Alert by Location",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"country\": \"Moldova\",\r\n    \"city\": \"Chisinau\",\r\n    \"disaster_name\": \"Drought\",\r\n    \"timestamp_start\": \"2023-10-12 21:31:00\",\r\n    \"timestamp_end\": \"2023-11-08 21:31:00\",\r\n    \"severity\": \"1\",\r\n    \"description\": \"test test test\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "localhost:9091/disaster/alert",
+							"host": [
+								"localhost"
+							],
+							"port": "9091",
+							"path": [
+								"disaster",
+								"alert"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "PUT Alert by ID",
+					"request": {
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"country\": \"Moldova\",\r\n    \"city\": \"Chisinau\",\r\n    \"disaster_name\": \"Drought\",\r\n    \"timestamp_start\": \"2023-10-12 21:31:00\",\r\n    \"timestamp_end\": \"2023-11-08 21:31:00\",\r\n    \"severity\": \"1\",\r\n    \"description\": \"test test test why why\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "localhost:9091/disaster/alert?alert_id={{alert_id}}",
+							"host": [
+								"localhost"
+							],
+							"port": "9091",
+							"path": [
+								"disaster",
+								"alert"
+							],
+							"query": [
+								{
+									"key": "alert_id",
+									"value": "{{alert_id}}"
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			],
+			"description": "API requests for the Natural Disaster Module."
+		},
+		{
+			"name": "Gateway Module",
+			"item": [
+				{
+					"name": "Requests of Weather",
+					"item": [
+						{
+							"name": "GET Cities",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "localhost:9090/weather/locations?country={{country}}",
+									"host": [
+										"localhost"
+									],
+									"port": "9090",
+									"path": [
+										"weather",
+										"locations"
+									],
+									"query": [
+										{
+											"key": "country",
+											"value": "{{country}}"
+										}
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "GET Current Weather",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "localhost:9090/weather/current?country={{country}}&city={{city}}",
+									"host": [
+										"localhost"
+									],
+									"port": "9090",
+									"path": [
+										"weather",
+										"current"
+									],
+									"query": [
+										{
+											"key": "country",
+											"value": "{{country}}"
+										},
+										{
+											"key": "city",
+											"value": "{{city}}"
+										}
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "GET Forecast Weather",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "localhost:9090/weather/forecast?country={{country}}&city={{city}}",
+									"host": [
+										"localhost"
+									],
+									"port": "9090",
+									"path": [
+										"weather",
+										"forecast"
+									],
+									"query": [
+										{
+											"key": "country",
+											"value": "{{country}}"
+										},
+										{
+											"key": "city",
+											"value": "{{city}}"
+										}
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "POST Weather Data",
+							"request": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\r\n    \"country\": \"Moldova\",\r\n    \"city\": \"Chisinau\",\r\n    \"timestamp\": \"2023-10-25 10:00:00\",\r\n    \"temperature\": 17,\r\n    \"humidity\": 85,\r\n    \"weather_condition\": \"Cloudy\"\r\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "localhost:9090/weather/add_data?type=weather",
+									"host": [
+										"localhost"
+									],
+									"port": "9090",
+									"path": [
+										"weather",
+										"add_data"
+									],
+									"query": [
+										{
+											"key": "type",
+											"value": "weather"
+										}
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "POST Forecast Data",
+							"request": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\r\n    \"country\": \"Moldova\",\r\n    \"city\": \"Chisinau\",\r\n    \"timestamp\": \"2023-10-29 00:00:00\",\r\n    \"temperature_high\": 20,\r\n    \"temperature_low\": 5,\r\n    \"humidity\": 15,\r\n    \"weather_condition\": \"Sunny\"\r\n}\r\n\r\n// The hh:mm:ss on timestamp should be 00:00:00",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "localhost:9090/weather/add_data?type=forecast",
+									"host": [
+										"localhost"
+									],
+									"port": "9090",
+									"path": [
+										"weather",
+										"add_data"
+									],
+									"query": [
+										{
+											"key": "type",
+											"value": "forecast"
+										}
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "PUT Weather Data",
+							"request": {
+								"method": "PUT",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\r\n    \"weather_id\": 12,\r\n    \"country\": \"Moldova\",\r\n    \"city\": \"Paris\",\r\n    \"timestamp\": \"2023-10-05 00:30:50\",\r\n    \"temperature\": 20,\r\n    \"humidity\": 15,\r\n    \"weather_condition\": \"Sunny\"\r\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "localhost:9090/weather/update_data?type=weather",
+									"host": [
+										"localhost"
+									],
+									"port": "9090",
+									"path": [
+										"weather",
+										"update_data"
+									],
+									"query": [
+										{
+											"key": "type",
+											"value": "weather"
+										}
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "POST Forecast Data",
+							"request": {
+								"method": "PUT",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\r\n    \"forecast_id\": 5,\r\n    \"country\": \"Moldova\",\r\n    \"city\": \"Chisinau\",\r\n    \"timestamp\": \"2023-10-29 00:00:00\",\r\n    \"temperature_high\": 25,\r\n    \"temperature_low\": 9,\r\n    \"humidity\": 25,\r\n    \"weather_condition\": \"Sunny\"\r\n}\r\n\r\n// The hh:mm:ss on timestamp should be 00:00:00",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "localhost:9090/weather/update_data?type=forecast",
+									"host": [
+										"localhost"
+									],
+									"port": "9090",
+									"path": [
+										"weather",
+										"update_data"
+									],
+									"query": [
+										{
+											"key": "type",
+											"value": "forecast"
+										}
+									]
+								}
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "Requests of Disaster",
+					"item": [
+						{
+							"name": "GET Disasters",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "localhost:9090/disaster",
+									"host": [
+										"localhost"
+									],
+									"port": "9090",
+									"path": [
+										"disaster"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "GET Disaster List by Location",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "localhost:9090/disaster/list?country={{country}}&city={{city}}&active={{active}}",
+									"host": [
+										"localhost"
+									],
+									"port": "9090",
+									"path": [
+										"disaster",
+										"list"
+									],
+									"query": [
+										{
+											"key": "country",
+											"value": "{{country}}"
+										},
+										{
+											"key": "city",
+											"value": "{{city}}"
+										},
+										{
+											"key": "active",
+											"value": "{{active}}"
+										}
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "POST Alert by Location",
+							"request": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\r\n    \"country\": \"Moldova\",\r\n    \"city\": \"Chisinau\",\r\n    \"disaster_name\": \"Drought\",\r\n    \"timestamp_start\": \"2023-10-12 21:31:00\",\r\n    \"timestamp_end\": \"2023-11-08 21:31:00\",\r\n    \"severity\": \"1\",\r\n    \"description\": \"test test test\"\r\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "localhost:9090/disaster/alert",
+									"host": [
+										"localhost"
+									],
+									"port": "9090",
+									"path": [
+										"disaster",
+										"alert"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "PUT Alert by ID",
+							"request": {
+								"method": "PUT",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\r\n    \"country\": \"Moldova\",\r\n    \"city\": \"Chisinau\",\r\n    \"disaster_name\": \"Drought\",\r\n    \"timestamp_start\": \"2023-10-12 21:31:00\",\r\n    \"timestamp_end\": \"2023-11-08 21:31:00\",\r\n    \"severity\": \"1\",\r\n    \"description\": \"test test test why why\"\r\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "localhost:9090/disaster/alert?alert_id={{alert_id}}",
+									"host": [
+										"localhost"
+									],
+									"port": "9090",
+									"path": [
+										"disaster",
+										"alert"
+									],
+									"query": [
+										{
+											"key": "alert_id",
+											"value": "{{alert_id}}"
+										}
+									]
+								}
+							},
+							"response": []
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "Service Discovery Module",
+			"item": [
+				{
+					"name": "POST Register Test",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"name\": \"ThisService\",\r\n    \"url\": \"localhost:8000\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "localhost:9000/register",
+							"host": [
+								"localhost"
+							],
+							"port": "9000",
+							"path": [
+								"register"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "GET Services",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "localhost:9000/get_service?service_name=weather-service-3",
+							"host": [
+								"localhost"
+							],
+							"port": "9000",
+							"path": [
+								"get_service"
+							],
+							"query": [
+								{
+									"key": "service_name",
+									"value": "weather-service-3"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "GET All Services",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "localhost:9000/get_all_services",
+							"host": [
+								"localhost"
+							],
+							"port": "9000",
+							"path": [
+								"get_all_services"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		}
+	]
+}

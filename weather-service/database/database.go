@@ -106,23 +106,18 @@ func GetCurrentWeather(country string, city string, disasterList []payload.Disas
 				return nil, 500, errors.New("internal server error")
 			}
 		}
-		if currentWeather.Location.City == "" {
-			return nil, 404, errors.New("no current weather found")
-		} else {
-			if len(disasterList) != 0 {
-				if disasterList[0].DisasterName != "" {
-					currentWeather.Disasters = disasterList
-				} else {
-					currentWeather.Disasters = nil
-				}
+		if len(disasterList) != 0 {
+			if disasterList[0].DisasterName != "" {
+				currentWeather.Disasters = disasterList
 			} else {
 				currentWeather.Disasters = nil
 			}
-			weather = append(weather, currentWeather)
-			return weather, 200, nil
+		} else {
+			currentWeather.Disasters = nil
 		}
+		weather = append(weather, currentWeather)
+		return weather, 200, nil
 	}
-
 }
 
 func GetForecastWeather(country string, city string, db *sql.DB) (forecast []payload.ForecastWeatherResponse, errCode int16, err error) {

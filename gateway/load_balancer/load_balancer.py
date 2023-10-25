@@ -1,9 +1,9 @@
-weather_minimum_turn = 0
-disaster_minimum_turn = 0
-weather_current_turn = 0
-disaster_current_turn = 0
-weather_maximum_turn = 2
-disaster_maximum_turn = 2
+weather_minimum_turn = 1
+disaster_minimum_turn = 1
+weather_current_turn = 1
+disaster_current_turn = 1
+weather_maximum_turn = 3
+disaster_maximum_turn = 3
 
 
 def load_balancer(service_name):

@@ -4,13 +4,15 @@ import (
 	"bytes"
 	"database/sql"
 	"encoding/json"
-	"github.com/gorilla/mux"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
 	"strconv"
 	"weather-service/database"
 	"weather-service/payload"
+
+	"github.com/gorilla/mux"
 )
 
 var db *sql.DB
@@ -139,8 +141,10 @@ func GetCurrentWeather(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	list, err := http.Get("http://localhost:8001/disaster/list?country=" + country + "&city=" + city + "&active=true")
+	disasterAddress := "http://disaster-service-1:9091/disaster/list"
+	list, err := http.Get(disasterAddress + "?country=" + country + "&city=" + city + "&active=true")
 	if err != nil {
+		fmt.Println("Error getting disaster list")
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusInternalServerError)
 		_, err := w.Write([]byte(`{"message": "internal server error"}`))
@@ -149,19 +153,25 @@ func GetCurrentWeather(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
-	var disasterList []payload.Disaster
-	err = json.NewDecoder(list.Body).Decode(&disasterList)
-	if err != nil {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusInternalServerError)
-		_, err := w.Write([]byte(`{"message": "internal server error"}`))
+	var disasters []payload.Disaster
+	if list.StatusCode == 404 {
+		fmt.Println("Disaster list not found")
+		disasters = nil
+	} else if list.StatusCode == 200 {
+		jsonDecoder := json.NewDecoder(list.Body)
+		err := jsonDecoder.Decode(&disasters)
 		if err != nil {
+			fmt.Println("Error decoding disaster list")
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusInternalServerError)
+			_, err := w.Write([]byte(`{"message": "internal server error"}`))
+			if err != nil {
+				return
+			}
 			return
 		}
-		return
 	}
-	weather, funcCodeErr, funcErr := database.GetCurrentWeather(country, city, disasterList, db)
-
+	weather, funcCodeErr, funcErr := database.GetCurrentWeather(country, city, disasters, db)
 	switch funcCodeErr {
 	case 200:
 		w.Header().Set("Content-Type", "application/json")

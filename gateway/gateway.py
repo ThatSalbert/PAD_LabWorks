@@ -31,11 +31,10 @@ def get_locations():
     except requests.exceptions.Timeout:
         raise requests.exceptions.Timeout
     service_address = response_from_service_discovery.json()['service_address']
-    port = service_address.split(':')[2]
     if country is None:
-        url = 'http://' + 'localhost' + ':' + port + '/weather/locations'
+        url = service_address + '/weather/locations'
     else:
-        url = 'http://' + 'localhost' + ':' + port + '/weather/locations?country=' + country
+        url = service_address + '/weather/locations?country=' + country
     try:
         response_from_service = requests.get(url, timeout = TASK_TIMEOUT)
     except requests.exceptions.Timeout:
@@ -51,18 +50,18 @@ def get_locations():
 def get_current_weather():
     country = request.args.get('country')
     city = request.args.get('city')
-    days = request.args.get('days')
     service_name = load_balancer('weather')
     try:
-        response_from_service_discovery = requests.get('http://localhost:8002/get_service?service_name=' + service_name,
-                                                       timeout = TASK_TIMEOUT)
+        response_from_service_discovery = requests.get(
+            'http://' + SERVICEDISC_HOSTNAME + ':' + SERVICEDISC_PORT + '/get_service?service_name=' + service_name,
+            timeout = TASK_TIMEOUT)
     except requests.exceptions.Timeout:
         raise requests.exceptions.Timeout
     service_address = response_from_service_discovery.json()['service_address']
-    if country is None or city is None or days is None:
-        url = service_address + '/weather/forecast'
+    if country is None or city is None:
+        url = service_address + '/weather/current'
     else:
-        url = service_address + '/weather/forecast?country=' + country + '&city=' + city + '&days=' + days
+        url = service_address + '/weather/current?country=' + country + '&city=' + city
     try:
         response_from_service = requests.get(url, timeout = TASK_TIMEOUT)
     except requests.exceptions.Timeout:
@@ -78,18 +77,18 @@ def get_current_weather():
 def get_weather_forecast():
     country = request.args.get('country')
     city = request.args.get('city')
-    days = request.args.get('days')
     service_name = load_balancer('weather')
     try:
-        response_from_service_discovery = requests.get('http://localhost:8002/get_service?service_name=' + service_name,
-                                                       timeout = TASK_TIMEOUT)
+        response_from_service_discovery = requests.get(
+            'http://' + SERVICEDISC_HOSTNAME + ':' + SERVICEDISC_PORT + '/get_service?service_name=' + service_name,
+            timeout = TASK_TIMEOUT)
     except requests.exceptions.Timeout:
         raise requests.exceptions.Timeout
     service_address = response_from_service_discovery.json()['service_address']
-    if country is None or city is None or days is None:
+    if country is None or city is None:
         url = service_address + '/weather/forecast'
     else:
-        url = service_address + '/weather/forecast?country=' + country + '&city=' + city + '&days=' + days
+        url = service_address + '/weather/forecast?country=' + country + '&city=' + city
     try:
         response_from_service = requests.get(url, timeout = TASK_TIMEOUT)
     except requests.exceptions.Timeout:
@@ -106,12 +105,16 @@ def add_data():
     data = request.get_json()
     service_name = load_balancer('weather')
     try:
-        response_from_service_discovery = requests.get('http://localhost:8002/get_service?service_name=' + service_name,
-                                                       timeout = TASK_TIMEOUT)
+        response_from_service_discovery = requests.get(
+            'http://' + SERVICEDISC_HOSTNAME + ':' + SERVICEDISC_PORT + '/get_service?service_name=' + service_name,
+            timeout = TASK_TIMEOUT)
     except requests.exceptions.Timeout:
         raise requests.exceptions.Timeout
     service_address = response_from_service_discovery.json()['service_address']
-    url = service_address + '/weather/add_data?type=' + type
+    if type is None:
+        url = service_address + '/weather/add_data'
+    else:
+        url = service_address + '/weather/add_data?type=' + type
     try:
         response_from_service = requests.post(url, json = data, timeout = TASK_TIMEOUT)
     except requests.exceptions.Timeout:
@@ -128,12 +131,16 @@ def delete_data():
     data = request.get_json()
     service_name = load_balancer('weather')
     try:
-        response_from_service_discovery = requests.get('http://localhost:8002/get_service?service_name=' + service_name,
-                                                       timeout = TASK_TIMEOUT)
+        response_from_service_discovery = requests.get(
+            'http://' + SERVICEDISC_HOSTNAME + ':' + SERVICEDISC_PORT + '/get_service?service_name=' + service_name,
+            timeout = TASK_TIMEOUT)
     except requests.exceptions.Timeout:
         raise requests.exceptions.Timeout
     service_address = response_from_service_discovery.json()['service_address']
-    url = service_address + '/weather/update_data?type=' + type
+    if type is None:
+        url = service_address + '/weather/update_data'
+    else:
+        url = service_address + '/weather/update_data?type=' + type
     try:
         response_from_service = requests.put(url, json = data, timeout = TASK_TIMEOUT)
     except requests.exceptions.Timeout:
@@ -149,8 +156,9 @@ def delete_data():
 def get_disasters():
     service_name = load_balancer('disaster')
     try:
-        response_from_service_discovery = requests.get('http://localhost:8002/get_service?service_name=' + service_name,
-                                                       timeout = TASK_TIMEOUT)
+        response_from_service_discovery = requests.get(
+            'http://' + SERVICEDISC_HOSTNAME + ':' + SERVICEDISC_PORT + '/get_service?service_name=' + service_name,
+            timeout = TASK_TIMEOUT)
     except requests.exceptions.Timeout:
         raise requests.exceptions.Timeout
     service_address = response_from_service_discovery.json()['service_address']
@@ -173,8 +181,9 @@ def get_disaster_list():
     active = request.args.get('active')
     service_name = load_balancer('disaster')
     try:
-        response_from_service_discovery = requests.get('http://localhost:8002/get_service?service_name=' + service_name,
-                                                       timeout = TASK_TIMEOUT)
+        response_from_service_discovery = requests.get(
+            'http://' + SERVICEDISC_HOSTNAME + ':' + SERVICEDISC_PORT + '/get_service?service_name=' + service_name,
+            timeout = TASK_TIMEOUT)
     except requests.exceptions.Timeout:
         raise requests.exceptions.Timeout
     service_address = response_from_service_discovery.json()['service_address']
@@ -197,8 +206,9 @@ def add_alert():
     data = request.get_json()
     service_name = load_balancer('disaster')
     try:
-        response_from_service_discovery = requests.get('http://localhost:8002/get_service?service_name=' + service_name,
-                                                       timeout = TASK_TIMEOUT)
+        response_from_service_discovery = requests.get(
+            'http://' + SERVICEDISC_HOSTNAME + ':' + SERVICEDISC_PORT + '/get_service?service_name=' + service_name,
+            timeout = TASK_TIMEOUT)
     except requests.exceptions.Timeout:
         raise requests.exceptions.Timeout
     service_address = response_from_service_discovery.json()['service_address']
@@ -219,8 +229,9 @@ def update_alert():
     data = request.get_json()
     service_name = load_balancer('disaster')
     try:
-        response_from_service_discovery = requests.get('http://localhost:8002/get_service?service_name=' + service_name,
-                                                       timeout = TASK_TIMEOUT)
+        response_from_service_discovery = requests.get(
+            'http://' + SERVICEDISC_HOSTNAME + ':' + SERVICEDISC_PORT + '/get_service?service_name=' + service_name,
+            timeout = TASK_TIMEOUT)
     except requests.exceptions.Timeout:
         raise requests.exceptions.Timeout
     service_address = response_from_service_discovery.json()['service_address']
