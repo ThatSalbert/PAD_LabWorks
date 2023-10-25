@@ -29,6 +29,19 @@ services:
       - "5433:5432"
     expose:
       - "5432"
+  test-database:
+    container_name: "test-database"
+    image: postgres:16.0
+    restart: always
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    volumes:
+      - ./databases/test-service-database.sql:/docker-entrypoint-initdb.d/test-service-database.sql
+    ports:
+      - "5434:5432"
+    expose:
+      - "5432"
   service_discovery:
     container_name: "service_discovery"
     image: thesalbert/service-discovery:latest
@@ -43,6 +56,7 @@ services:
     container_name: "weather-service-1"
     image: thesalbert/weather-service:latest
     build: ./weather-service
+    restart: always
     ports:
       - "9001:9001"
     depends_on:
@@ -61,6 +75,7 @@ services:
     container_name: "weather-service-2"
     image: thesalbert/weather-service:latest
     build: ./weather-service
+    restart: always
     ports:
       - "9002:9002"
     depends_on:
@@ -79,6 +94,7 @@ services:
     container_name: "weather-service-3"
     image: thesalbert/weather-service:latest
     build: ./weather-service
+    restart: always
     ports:
       - "9003:9003"
     depends_on:
@@ -97,12 +113,15 @@ services:
     container_name: "disaster-service-1"
     image: thesalbert/disaster-service:latest
     build: ./disaster-service
+    restart: always
     ports:
       - "9091:9091"
     depends_on:
       disaster-database:
         condition: service_started
       service_discovery:
+        condition: service_started
+      test-database:
         condition: service_started
     environment:
       - DISASTER_PORT=9091
@@ -115,6 +134,7 @@ services:
     container_name: "disaster-service-2"
     image: thesalbert/disaster-service:latest
     build: ./disaster-service
+    restart: always
     ports:
       - "9092:9092"
     depends_on:
@@ -133,6 +153,7 @@ services:
     container_name: "disaster-service-3"
     image: thesalbert/disaster-service:latest
     build: ./disaster-service
+    restart: always
     ports:
       - "9093:9093"
     depends_on:
@@ -151,6 +172,7 @@ services:
     container_name: "gateway"
     image: thesalbert/gateway:latest
     build: ./gateway
+    restart: always
     ports:
       - "9090:9090"
     depends_on:

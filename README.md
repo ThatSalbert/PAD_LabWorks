@@ -10,3 +10,5 @@
  **NOTE 2**: List of variables and what values they can have can be found in the description of the Postman collection.
 
  **NOTE 3**: The only table that has data is the `location_table` in both databases. The only country that is available is `Moldova`.
+
+ **NOTE 4**: Unit Test is added to `disaster-service-1`. Open up a terminal of `disaster-service-1` and run `go test main_test.go` to run the test.
