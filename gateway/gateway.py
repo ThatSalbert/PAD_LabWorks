@@ -24,6 +24,7 @@ limiter = Limiter(get_remote_address, app = api, default_limits = ["200 per day"
 def get_locations():
     country = request.args.get('country')
     service_name = load_balancer('weather')
+    print('calling service:' + service_name + '\n')
     try:
         response_from_service_discovery = requests.get(
             'http://' + SERVICEDISC_HOSTNAME + ':' + SERVICEDISC_PORT + '/get_service?service_name=' + service_name,
@@ -51,6 +52,7 @@ def get_current_weather():
     country = request.args.get('country')
     city = request.args.get('city')
     service_name = load_balancer('weather')
+    print('calling service:' + service_name + '\n')
     try:
         response_from_service_discovery = requests.get(
             'http://' + SERVICEDISC_HOSTNAME + ':' + SERVICEDISC_PORT + '/get_service?service_name=' + service_name,
@@ -78,6 +80,7 @@ def get_weather_forecast():
     country = request.args.get('country')
     city = request.args.get('city')
     service_name = load_balancer('weather')
+    print('calling service:' + service_name + '\n')
     try:
         response_from_service_discovery = requests.get(
             'http://' + SERVICEDISC_HOSTNAME + ':' + SERVICEDISC_PORT + '/get_service?service_name=' + service_name,
@@ -104,6 +107,7 @@ def add_data():
     type = request.args.get('type')
     data = request.get_json()
     service_name = load_balancer('weather')
+    print('calling service:' + service_name + '\n')
     try:
         response_from_service_discovery = requests.get(
             'http://' + SERVICEDISC_HOSTNAME + ':' + SERVICEDISC_PORT + '/get_service?service_name=' + service_name,
@@ -130,6 +134,7 @@ def delete_data():
     type = request.args.get('type')
     data = request.get_json()
     service_name = load_balancer('weather')
+    print('calling service:' + service_name + '\n')
     try:
         response_from_service_discovery = requests.get(
             'http://' + SERVICEDISC_HOSTNAME + ':' + SERVICEDISC_PORT + '/get_service?service_name=' + service_name,
@@ -155,6 +160,7 @@ def delete_data():
 @circuit_breaker
 def get_disasters():
     service_name = load_balancer('disaster')
+    print('calling service:' + service_name + '\n')
     try:
         response_from_service_discovery = requests.get(
             'http://' + SERVICEDISC_HOSTNAME + ':' + SERVICEDISC_PORT + '/get_service?service_name=' + service_name,
@@ -180,6 +186,7 @@ def get_disaster_list():
     city = request.args.get('city')
     active = request.args.get('active')
     service_name = load_balancer('disaster')
+    print('calling service:' + service_name + '\n')
     try:
         response_from_service_discovery = requests.get(
             'http://' + SERVICEDISC_HOSTNAME + ':' + SERVICEDISC_PORT + '/get_service?service_name=' + service_name,
@@ -205,6 +212,7 @@ def get_disaster_list():
 def add_alert():
     data = request.get_json()
     service_name = load_balancer('disaster')
+    print('calling service:' + service_name + '\n')
     try:
         response_from_service_discovery = requests.get(
             'http://' + SERVICEDISC_HOSTNAME + ':' + SERVICEDISC_PORT + '/get_service?service_name=' + service_name,
@@ -228,6 +236,7 @@ def update_alert():
     alert_id = request.args.get('alert_id')
     data = request.get_json()
     service_name = load_balancer('disaster')
+    print('calling service:' + service_name + '\n')
     try:
         response_from_service_discovery = requests.get(
             'http://' + SERVICEDISC_HOSTNAME + ':' + SERVICEDISC_PORT + '/get_service?service_name=' + service_name,
