@@ -49,7 +49,7 @@ The database of the natural disaster data will have the following tables:
 
 ### Weather Data Service
 
-* `GET /weather/current?location={location}` - returns the current weather data for the specified location
+* `GET /weather/current?country={country}&city={city}` - returns the current weather data for the specified location
 
 Response:
 
@@ -60,11 +60,12 @@ Response:
     "timestamp": "2023-09-12T14:21:57",
     "temperature": 24,
     "humidity": 21,
-    "weather_condition": "Sunny"
+    "weather_condition": "Sunny",
+    "disasters": [...]
 }
 ```
 
-* `GET /weather/forecast?location={location}` - returns the forecast weather data for the specified location
+* `GET /weather/forecast?country={country}&city={city}` - returns the forecast weather data for the specified location
 
 Response:
 
@@ -72,10 +73,18 @@ Response:
 {
     "country": "Moldova",
     "location": "Chisinau",
-    "forecast_date": "2023-09-12",
-    "temperature_high": 29,
-    "temperature_low": 17,
-    "humidity": 34,
+    "forecast":[
+        {
+            "timestamp": "2023-09-12T00:00:00",
+            "temperature_low": 24,
+            "temperature_high": 29,
+            "humidity": 21,
+            "weather_condition": "Sunny"
+        },
+        {
+            ...
+        }
+    ]
 }
 ```
 
@@ -87,9 +96,14 @@ Response:
 {
     "country": "Moldova",
     "locations": [
-        "Chisinau",
-        "Balti",
-        "Cahul"
+        {
+            "city": "Chisinau",
+            "latitude": 47.010452,
+            "longitude": 28.863810
+        },
+        {
+            ...
+        }
     ]
 }
 ```
@@ -100,11 +114,12 @@ Request to add current weather data `type=weather`:
 
 ```json
 {
-    "location_id": 1,
-    "timestamp": "2023-09-12T17:00:00",
-    "temperature": 24,
-    "humidity": 21,
-    "weather_condition": "Sunny"
+    "country": "Moldova",
+    "city": "Chisinau",
+    "timestamp": "2023-10-26 16:00:00",
+    "temperature": 17,
+    "humidity": 85,
+    "weather_condition": "Cloudy"
 }
 ```
 
@@ -128,11 +143,13 @@ Request to add forecast data `type=forecast`:
 
 ```json
 {
-    "location_id": 1,
+    "country": "Moldova",
+    "city": "Chisinau",
     "forecast_date": "2023-09-12",
     "temperature_high": 29,
     "temperature_low": 17,
     "humidity": 34,
+    "weather_condition": "Sunny"
 }
 ```
 
