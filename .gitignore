@@ -10,3 +10,4 @@
 /gateway/circuit_breaker/__pycache__
 /gateway/load_balancer/__pycache__
 .env
+.vscode

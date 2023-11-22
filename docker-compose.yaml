@@ -174,16 +174,37 @@ services:
     build: ./gateway
     restart: always
     ports:
-      - "9090:9090"
+      - "9080:9080"
     depends_on:
       - service_discovery
     environment:
-      - GATEWAY_PORT=9090
+      - GATEWAY_PORT=9080
       - SERVICEDISC_HOSTNAME=service_discovery
       - SERVICEDISC_PORT=9000
       - TIMEOUT=0.05
       - FAILURE_LIMIT=3
       - FAILURE_THRESHOLD=3.5
+  prometheus:
+    container_name: "prometheus"
+    image: prom/prometheus:latest
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+    restart: always
+    ports:
+      - "9090:9090"
+  grafana:
+    container_name: "grafana"
+    image: grafana/grafana:latest
+    restart: always
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./grafana:/etc/grafana/provisioning/
+    depends_on:
+      - prometheus
+    
 volumes:
   weather-volume:
     driver: local
