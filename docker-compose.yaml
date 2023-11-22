@@ -65,6 +65,7 @@ services:
       service_discovery:
         condition: service_started
     environment:
+      - SERVICE_TYPE=weather
       - WEATHER_PORT=9001
       - WEATHER_HOSTNAME=weather-service-1
       - SERVICEDISC_HOSTNAME=service_discovery
@@ -84,6 +85,7 @@ services:
       service_discovery:
         condition: service_started
     environment:
+      - SERVICE_TYPE=weather
       - WEATHER_PORT=9002
       - WEATHER_HOSTNAME=weather-service-2
       - SERVICEDISC_HOSTNAME=service_discovery  
@@ -103,6 +105,7 @@ services:
       service_discovery:
         condition: service_started
     environment:
+      - SERVICE_TYPE=weather
       - WEATHER_PORT=9003
       - WEATHER_HOSTNAME=weather-service-3
       - SERVICEDISC_HOSTNAME=service_discovery
@@ -124,6 +127,7 @@ services:
       test-database:
         condition: service_started
     environment:
+      - SERVICE_TYPE=disaster
       - DISASTER_PORT=9091
       - DISASTER_HOSTNAME=disaster-service-1
       - SERVICEDISC_HOSTNAME=service_discovery
@@ -143,6 +147,7 @@ services:
       service_discovery:
         condition: service_started
     environment:
+      - SERVICE_TYPE=disaster
       - DISASTER_PORT=9092
       - DISASTER_HOSTNAME=disaster-service-2
       - SERVICEDISC_HOSTNAME=service_discovery
@@ -162,6 +167,7 @@ services:
       service_discovery:
         condition: service_started
     environment:
+      - SERVICE_TYPE=disaster
       - DISASTER_PORT=9093
       - DISASTER_HOSTNAME=disaster-service-3
       - SERVICEDISC_HOSTNAME=service_discovery
@@ -184,26 +190,26 @@ services:
       - TIMEOUT=0.05
       - FAILURE_LIMIT=3
       - FAILURE_THRESHOLD=3.5
-  prometheus:
-    container_name: "prometheus"
-    image: prom/prometheus:latest
-    volumes:
-      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
-    command:
-      - '--config.file=/etc/prometheus/prometheus.yml'
-    restart: always
-    ports:
-      - "9090:9090"
-  grafana:
-    container_name: "grafana"
-    image: grafana/grafana:latest
-    restart: always
-    ports:
-      - "3000:3000"
-    volumes:
-      - ./grafana:/etc/grafana/provisioning/
-    depends_on:
-      - prometheus
+  # prometheus:
+  #   container_name: "prometheus"
+  #   image: prom/prometheus:latest
+  #   volumes:
+  #     - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+  #   command:
+  #     - '--config.file=/etc/prometheus/prometheus.yml'
+  #   restart: always
+  #   ports:
+  #     - "9090:9090"
+  # grafana:
+  #   container_name: "grafana"
+  #   image: grafana/grafana:latest
+  #   restart: always
+  #   ports:
+  #     - "3000:3000"
+  #   volumes:
+  #     - ./grafana:/etc/grafana/provisioning/
+  #   depends_on:
+  #     - prometheus
     
 volumes:
   weather-volume:

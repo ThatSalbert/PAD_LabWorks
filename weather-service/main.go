@@ -21,6 +21,7 @@ var err error
 var maxConnections = 10
 
 var (
+	SERVICE_TYPE         = os.Getenv("SERVICE_TYPE")
 	WEATHER_HOSTNAME     = os.Getenv("WEATHER_HOSTNAME")
 	WEATHER_PORT         = os.Getenv("WEATHER_PORT")
 	SERVICEDISC_HOSTNAME = os.Getenv("SERVICEDISC_HOSTNAME")
@@ -29,8 +30,9 @@ var (
 	DB_PORT              = os.Getenv("DB_PORT")
 )
 
-func registerService(WEATHER_HOSTNAME string, WEATHER_PORT string, SERVICEDISC_HOSTNAME string, SERVICEDISC_PORT string) {
+func registerService(WEATHER_HOSTNAME string, WEATHER_PORT string, SERVICEDISC_HOSTNAME string, SERVICEDISC_PORT string, SERVICE_TYPE string) {
 	var jsonRequest = []byte(`{
+		"service_type": "` + SERVICE_TYPE + `",
 		"service_name": "` + WEATHER_HOSTNAME + `",
 		"service_address": "http://` + WEATHER_HOSTNAME + `:` + WEATHER_PORT + `"
 	}`)
@@ -77,7 +79,7 @@ func main() {
 	//PUT /weather/update_data?type={type}
 	router.HandleFunc("/weather/update_data", UpdateWeatherData).Methods("PUT").Queries("type", "{type}")
 
-	registerService(WEATHER_HOSTNAME, WEATHER_PORT, SERVICEDISC_HOSTNAME, SERVICEDISC_PORT)
+	registerService(WEATHER_HOSTNAME, WEATHER_PORT, SERVICEDISC_HOSTNAME, SERVICEDISC_PORT, SERVICE_TYPE)
 
 	log.Fatal(http.ListenAndServe(":"+WEATHER_PORT, router))
 

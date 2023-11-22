@@ -20,16 +20,18 @@ var err error
 var maxConnections = 10
 
 var (
-	DISASTER_HOSTNAME 		= os.Getenv("DISASTER_HOSTNAME")
-	DISASTER_PORT     		= os.Getenv("DISASTER_PORT")
-	SERVICEDISC_HOSTNAME 	= os.Getenv("SERVICEDISC_HOSTNAME")
-	SERVICEDISC_PORT     	= os.Getenv("SERVICEDISC_PORT")
-	DB_HOST	 				= os.Getenv("DB_HOST")
-	DB_PORT     			= os.Getenv("DB_PORT")
+	SERVICE_TYPE         = os.Getenv("SERVICE_TYPE")
+	DISASTER_HOSTNAME    = os.Getenv("DISASTER_HOSTNAME")
+	DISASTER_PORT        = os.Getenv("DISASTER_PORT")
+	SERVICEDISC_HOSTNAME = os.Getenv("SERVICEDISC_HOSTNAME")
+	SERVICEDISC_PORT     = os.Getenv("SERVICEDISC_PORT")
+	DB_HOST              = os.Getenv("DB_HOST")
+	DB_PORT              = os.Getenv("DB_PORT")
 )
 
-func registerService(DISASTER_HOSTNAME string, DISASTER_PORT string, SERVICEDISC_HOSTNAME string, SERVICEDISC_PORT string) {
+func registerService(DISASTER_HOSTNAME string, DISASTER_PORT string, SERVICEDISC_HOSTNAME string, SERVICEDISC_PORT string, SERVICE_TYPE string) {
 	var jsonRequest = []byte(`{
+		"service_type": "` + SERVICE_TYPE + `",
 		"service_name": "` + DISASTER_HOSTNAME + `",
 		"service_address": "http://` + DISASTER_HOSTNAME + `:` + DISASTER_PORT + `"
 	}`)
@@ -73,7 +75,7 @@ func main() {
 	//PUT /disaster/alert?alert_id={alert_id}
 	router.HandleFunc("/disaster/alert", PutDisasterAlert).Methods("PUT").Queries("alert_id", "{alert_id}")
 
-	registerService(DISASTER_HOSTNAME, DISASTER_PORT, SERVICEDISC_HOSTNAME, SERVICEDISC_PORT)
+	registerService(DISASTER_HOSTNAME, DISASTER_PORT, SERVICEDISC_HOSTNAME, SERVICEDISC_PORT, SERVICE_TYPE)
 
 	log.Fatal(http.ListenAndServe(":"+DISASTER_PORT, router))
 }
