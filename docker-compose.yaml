@@ -196,16 +196,16 @@ services:
       - TIMEOUT=0.05
       - FAILURE_LIMIT=3
       - FAILURE_THRESHOLD=3.5
-  # prometheus:
-  #   container_name: "prometheus"
-  #   image: prom/prometheus:latest
-  #   volumes:
-  #     - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
-  #   command:
-  #     - '--config.file=/etc/prometheus/prometheus.yml'
-  #   restart: always
-  #   ports:
-  #     - "9090:9090"
+  prometheus:
+    container_name: "prometheus"
+    image: prom/prometheus:latest
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+    restart: always
+    ports:
+      - "9090:9090"
   # grafana:
   #   container_name: "grafana"
   #   image: grafana/grafana:latest
