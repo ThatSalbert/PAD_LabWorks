@@ -5,10 +5,13 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"log"
 	"net/http"
 	"os"
 	"strconv"
+	"time"
 	"weather-service/database"
 	"weather-service/payload"
 
@@ -17,9 +20,6 @@ import (
 
 var db *sql.DB
 var err error
-
-var maxConnections = 10
-
 var (
 	SERVICE_TYPE         = os.Getenv("SERVICE_TYPE")
 	WEATHER_HOSTNAME     = os.Getenv("WEATHER_HOSTNAME")
@@ -28,6 +28,33 @@ var (
 	SERVICEDISC_PORT     = os.Getenv("SERVICEDISC_PORT")
 	DB_HOST              = os.Getenv("DB_HOST")
 	DB_PORT              = os.Getenv("DB_PORT")
+	MAX_CONNECTIONS      = os.Getenv("MAX_CONNECTIONS")
+)
+
+var (
+	httpRequestsTotal = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "http_requests_total",
+			Help: "Total number of HTTP requests",
+		},
+		[]string{"code", "method"},
+	)
+
+	httpRequestsDuration = prometheus.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Name: "http_requests_duration_seconds",
+			Help: "Duration of HTTP requests",
+		},
+		[]string{"code", "method"},
+	)
+
+	errCounter = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "error_counter",
+			Help: "Total number of errors",
+		},
+		[]string{"code", "method"},
+	)
 )
 
 func registerService(WEATHER_HOSTNAME string, WEATHER_PORT string, SERVICEDISC_HOSTNAME string, SERVICEDISC_PORT string, SERVICE_TYPE string) {
@@ -51,6 +78,11 @@ func registerService(WEATHER_HOSTNAME string, WEATHER_PORT string, SERVICEDISC_H
 }
 
 func main() {
+	prometheus.MustRegister(httpRequestsTotal)
+	prometheus.MustRegister(httpRequestsDuration)
+	prometheus.MustRegister(errCounter)
+
+	maxConnections, _ := strconv.Atoi(MAX_CONNECTIONS)
 	db, err = database.ConnectToDB(maxConnections, DB_HOST, DB_PORT)
 	if err != nil {
 		log.Fatal(err)
@@ -79,19 +111,25 @@ func main() {
 	//PUT /weather/update_data?type={type}
 	router.HandleFunc("/weather/update_data", UpdateWeatherData).Methods("PUT").Queries("type", "{type}")
 
+	router.Handle("/metrics", promhttp.Handler())
+
 	registerService(WEATHER_HOSTNAME, WEATHER_PORT, SERVICEDISC_HOSTNAME, SERVICEDISC_PORT, SERVICE_TYPE)
 
 	log.Fatal(http.ListenAndServe(":"+WEATHER_PORT, router))
 
 }
 func GetLocations(w http.ResponseWriter, r *http.Request) {
+	httpRequestsTotal.WithLabelValues(strconv.Itoa(http.StatusOK), r.Method).Inc()
+	startTimer := time.Now()
 	query := r.URL.Query()
 	country := query.Get("country")
 	if country == "" {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
 		_, err := w.Write([]byte(`{"message": "country query parameter not specified"}`))
+		httpRequestsDuration.WithLabelValues(strconv.Itoa(http.StatusBadRequest), r.Method).Observe(time.Since(startTimer).Seconds())
 		if err != nil {
+			errCounter.WithLabelValues(strconv.Itoa(http.StatusBadRequest), r.Method).Inc()
 			return
 		}
 		return
@@ -106,7 +144,9 @@ func GetLocations(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		jsonResponse, _ := json.Marshal(locationResponse)
 		_, err := w.Write(jsonResponse)
+		httpRequestsDuration.WithLabelValues(strconv.Itoa(http.StatusOK), r.Method).Observe(time.Since(startTimer).Seconds())
 		if err != nil {
+			errCounter.WithLabelValues(strconv.Itoa(http.StatusOK), r.Method).Inc()
 			return
 		}
 		return
@@ -114,7 +154,9 @@ func GetLocations(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusNotFound)
 		_, err := w.Write([]byte(`{"message": ` + "\"" + funcErr.Error() + "\"" + `}`))
+		httpRequestsDuration.WithLabelValues(strconv.Itoa(http.StatusNotFound), r.Method).Observe(time.Since(startTimer).Seconds())
 		if err != nil {
+			errCounter.WithLabelValues(strconv.Itoa(http.StatusNotFound), r.Method).Inc()
 			return
 		}
 		return
@@ -122,7 +164,9 @@ func GetLocations(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusInternalServerError)
 		_, err := w.Write([]byte(`{"message": ` + "\"" + funcErr.Error() + "\"" + `}`))
+		httpRequestsDuration.WithLabelValues(strconv.Itoa(http.StatusInternalServerError), r.Method).Observe(time.Since(startTimer).Seconds())
 		if err != nil {
+			errCounter.WithLabelValues(strconv.Itoa(http.StatusInternalServerError), r.Method).Inc()
 			return
 		}
 		return
@@ -130,6 +174,8 @@ func GetLocations(w http.ResponseWriter, r *http.Request) {
 }
 
 func GetCurrentWeather(w http.ResponseWriter, r *http.Request) {
+	httpRequestsTotal.WithLabelValues(strconv.Itoa(http.StatusOK), r.Method).Inc()
+	startTimer := time.Now()
 	query := r.URL.Query()
 	country := query.Get("country")
 	city := query.Get("city")
@@ -137,7 +183,9 @@ func GetCurrentWeather(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
 		_, err := w.Write([]byte(`{"message": "country or city query parameter not specified"}`))
+		httpRequestsDuration.WithLabelValues(strconv.Itoa(http.StatusBadRequest), r.Method).Observe(time.Since(startTimer).Seconds())
 		if err != nil {
+			errCounter.WithLabelValues(strconv.Itoa(http.StatusBadRequest), r.Method).Inc()
 			return
 		}
 		return
@@ -150,7 +198,9 @@ func GetCurrentWeather(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusInternalServerError)
 		_, err := w.Write([]byte(`{"message": "internal server error"}`))
+		httpRequestsDuration.WithLabelValues(strconv.Itoa(http.StatusInternalServerError), r.Method).Observe(time.Since(startTimer).Seconds())
 		if err != nil {
+			errCounter.WithLabelValues(strconv.Itoa(http.StatusInternalServerError), r.Method).Inc()
 			return
 		}
 		return
@@ -167,7 +217,9 @@ func GetCurrentWeather(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusInternalServerError)
 			_, err := w.Write([]byte(`{"message": "internal server error"}`))
+			httpRequestsDuration.WithLabelValues(strconv.Itoa(http.StatusInternalServerError), r.Method).Observe(time.Since(startTimer).Seconds())
 			if err != nil {
+				errCounter.WithLabelValues(strconv.Itoa(http.StatusInternalServerError), r.Method).Inc()
 				return
 			}
 			return
@@ -180,7 +232,9 @@ func GetCurrentWeather(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		jsonResponse, _ := json.Marshal(weather)
 		_, err := w.Write(jsonResponse)
+		httpRequestsDuration.WithLabelValues(strconv.Itoa(http.StatusOK), r.Method).Observe(time.Since(startTimer).Seconds())
 		if err != nil {
+			errCounter.WithLabelValues(strconv.Itoa(http.StatusOK), r.Method).Inc()
 			return
 		}
 		return
@@ -190,7 +244,9 @@ func GetCurrentWeather(w http.ResponseWriter, r *http.Request) {
 		var funcErrString string
 		funcErrString = funcErr.Error()
 		_, err := w.Write([]byte(`{"message": ` + "\"" + funcErrString + "\"" + `}`))
+		httpRequestsDuration.WithLabelValues(strconv.Itoa(http.StatusNotFound), r.Method).Observe(time.Since(startTimer).Seconds())
 		if err != nil {
+			errCounter.WithLabelValues(strconv.Itoa(http.StatusNotFound), r.Method).Inc()
 			return
 		}
 		return
@@ -198,7 +254,9 @@ func GetCurrentWeather(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusInternalServerError)
 		_, err := w.Write([]byte(`{"message": ` + "\"" + funcErr.Error() + "\"" + `}`))
+		httpRequestsDuration.WithLabelValues(strconv.Itoa(http.StatusInternalServerError), r.Method).Observe(time.Since(startTimer).Seconds())
 		if err != nil {
+			errCounter.WithLabelValues(strconv.Itoa(http.StatusInternalServerError), r.Method).Inc()
 			return
 		}
 		return
@@ -206,6 +264,8 @@ func GetCurrentWeather(w http.ResponseWriter, r *http.Request) {
 }
 
 func GetWeatherForecast(w http.ResponseWriter, r *http.Request) {
+	httpRequestsTotal.WithLabelValues(strconv.Itoa(http.StatusOK), r.Method).Inc()
+	startTimer := time.Now()
 	query := r.URL.Query()
 	country := query.Get("country")
 	city := query.Get("city")
@@ -213,7 +273,9 @@ func GetWeatherForecast(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
 		_, err := w.Write([]byte(`{"message": "country or city query parameter not specified"}`))
+		httpRequestsDuration.WithLabelValues(strconv.Itoa(http.StatusBadRequest), r.Method).Observe(time.Since(startTimer).Seconds())
 		if err != nil {
+			errCounter.WithLabelValues(strconv.Itoa(http.StatusBadRequest), r.Method).Inc()
 			return
 		}
 		return
@@ -225,7 +287,9 @@ func GetWeatherForecast(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		jsonResponse, _ := json.Marshal(weather)
 		_, err := w.Write(jsonResponse)
+		httpRequestsDuration.WithLabelValues(strconv.Itoa(http.StatusOK), r.Method).Observe(time.Since(startTimer).Seconds())
 		if err != nil {
+			errCounter.WithLabelValues(strconv.Itoa(http.StatusOK), r.Method).Inc()
 			return
 		}
 		return
@@ -233,7 +297,9 @@ func GetWeatherForecast(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusNotFound)
 		_, err := w.Write([]byte(`{"message": ` + "\"" + funcErr.Error() + "\"" + `}`))
+		httpRequestsDuration.WithLabelValues(strconv.Itoa(http.StatusNotFound), r.Method).Observe(time.Since(startTimer).Seconds())
 		if err != nil {
+			errCounter.WithLabelValues(strconv.Itoa(http.StatusNotFound), r.Method).Inc()
 			return
 		}
 		return
@@ -241,7 +307,9 @@ func GetWeatherForecast(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusInternalServerError)
 		_, err := w.Write([]byte(`{"message": ` + "\"" + funcErr.Error() + "\"" + `}`))
+		httpRequestsDuration.WithLabelValues(strconv.Itoa(http.StatusInternalServerError), r.Method).Observe(time.Since(startTimer).Seconds())
 		if err != nil {
+			errCounter.WithLabelValues(strconv.Itoa(http.StatusInternalServerError), r.Method).Inc()
 			return
 		}
 		return
@@ -249,6 +317,8 @@ func GetWeatherForecast(w http.ResponseWriter, r *http.Request) {
 }
 
 func AddWeatherData(w http.ResponseWriter, r *http.Request) {
+	httpRequestsTotal.WithLabelValues(strconv.Itoa(http.StatusOK), r.Method).Inc()
+	startTimer := time.Now()
 	query := r.URL.Query()
 	dataType := query.Get("type")
 	jsonDecoder := json.NewDecoder(r.Body)
@@ -259,7 +329,9 @@ func AddWeatherData(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusBadRequest)
 			_, err := w.Write([]byte(`{"message": "invalid JSON payload"}`))
+			httpRequestsDuration.WithLabelValues(strconv.Itoa(http.StatusBadRequest), r.Method).Observe(time.Since(startTimer).Seconds())
 			if err != nil {
+				errCounter.WithLabelValues(strconv.Itoa(http.StatusBadRequest), r.Method).Inc()
 				return
 			}
 			return
@@ -270,7 +342,9 @@ func AddWeatherData(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusOK)
 			_, err := w.Write([]byte(`{"message": "weather data added successfully with id=` + strconv.FormatInt(*weatherID, 10) + `"}`))
+			httpRequestsDuration.WithLabelValues(strconv.Itoa(http.StatusOK), r.Method).Observe(time.Since(startTimer).Seconds())
 			if err != nil {
+				errCounter.WithLabelValues(strconv.Itoa(http.StatusOK), r.Method).Inc()
 				return
 			}
 			return
@@ -278,7 +352,9 @@ func AddWeatherData(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusConflict)
 			_, err := w.Write([]byte(`{"message": ` + "\"" + funcErr.Error() + "\"" + `}`))
+			httpRequestsDuration.WithLabelValues(strconv.Itoa(http.StatusConflict), r.Method).Observe(time.Since(startTimer).Seconds())
 			if err != nil {
+				errCounter.WithLabelValues(strconv.Itoa(http.StatusConflict), r.Method).Inc()
 				return
 			}
 			return
@@ -286,7 +362,9 @@ func AddWeatherData(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusNotFound)
 			_, err := w.Write([]byte(`{"message": ` + "\"" + funcErr.Error() + "\"" + `}`))
+			httpRequestsDuration.WithLabelValues(strconv.Itoa(http.StatusNotFound), r.Method).Observe(time.Since(startTimer).Seconds())
 			if err != nil {
+				errCounter.WithLabelValues(strconv.Itoa(http.StatusNotFound), r.Method).Inc()
 				return
 			}
 			return
@@ -294,7 +372,9 @@ func AddWeatherData(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusInternalServerError)
 			_, err := w.Write([]byte(`{"message": ` + "\"" + funcErr.Error() + "\"" + `}`))
+			httpRequestsDuration.WithLabelValues(strconv.Itoa(http.StatusInternalServerError), r.Method).Observe(time.Since(startTimer).Seconds())
 			if err != nil {
+				errCounter.WithLabelValues(strconv.Itoa(http.StatusInternalServerError), r.Method).Inc()
 				return
 			}
 			return
@@ -306,7 +386,9 @@ func AddWeatherData(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusBadRequest)
 			_, err := w.Write([]byte(`{"message": "invalid JSON payload"}`))
+			httpRequestsDuration.WithLabelValues(strconv.Itoa(http.StatusBadRequest), r.Method).Observe(time.Since(startTimer).Seconds())
 			if err != nil {
+				errCounter.WithLabelValues(strconv.Itoa(http.StatusBadRequest), r.Method).Inc()
 				return
 			}
 			return
@@ -317,7 +399,9 @@ func AddWeatherData(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusOK)
 			_, err := w.Write([]byte(`{"message": "forecast data added successfully with id=` + strconv.FormatInt(*forecastID, 10) + `"}`))
+			httpRequestsDuration.WithLabelValues(strconv.Itoa(http.StatusOK), r.Method).Observe(time.Since(startTimer).Seconds())
 			if err != nil {
+				errCounter.WithLabelValues(strconv.Itoa(http.StatusOK), r.Method).Inc()
 				return
 			}
 			return
@@ -325,7 +409,9 @@ func AddWeatherData(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusConflict)
 			_, err := w.Write([]byte(`{"message": ` + "\"" + funcErr.Error() + "\"" + `}`))
+			httpRequestsDuration.WithLabelValues(strconv.Itoa(http.StatusConflict), r.Method).Observe(time.Since(startTimer).Seconds())
 			if err != nil {
+				errCounter.WithLabelValues(strconv.Itoa(http.StatusConflict), r.Method).Inc()
 				return
 			}
 			return
@@ -333,7 +419,9 @@ func AddWeatherData(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusNotFound)
 			_, err := w.Write([]byte(`{"message": ` + "\"" + funcErr.Error() + "\"" + `}`))
+			httpRequestsDuration.WithLabelValues(strconv.Itoa(http.StatusNotFound), r.Method).Observe(time.Since(startTimer).Seconds())
 			if err != nil {
+				errCounter.WithLabelValues(strconv.Itoa(http.StatusNotFound), r.Method).Inc()
 				return
 			}
 			return
@@ -341,7 +429,9 @@ func AddWeatherData(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusInternalServerError)
 			_, err := w.Write([]byte(`{"message": ` + "\"" + funcErr.Error() + "\"" + `}`))
+			httpRequestsDuration.WithLabelValues(strconv.Itoa(http.StatusInternalServerError), r.Method).Observe(time.Since(startTimer).Seconds())
 			if err != nil {
+				errCounter.WithLabelValues(strconv.Itoa(http.StatusInternalServerError), r.Method).Inc()
 				return
 			}
 			return
@@ -350,6 +440,8 @@ func AddWeatherData(w http.ResponseWriter, r *http.Request) {
 }
 
 func UpdateWeatherData(w http.ResponseWriter, r *http.Request) {
+	httpRequestsTotal.WithLabelValues(strconv.Itoa(http.StatusOK), r.Method).Inc()
+	startTimer := time.Now()
 	query := r.URL.Query()
 	dataType := query.Get("type")
 	jsonDecoder := json.NewDecoder(r.Body)
@@ -360,7 +452,9 @@ func UpdateWeatherData(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusBadRequest)
 			_, err := w.Write([]byte(`{"message": "invalid JSON payload"}`))
+			httpRequestsDuration.WithLabelValues(strconv.Itoa(http.StatusBadRequest), r.Method).Observe(time.Since(startTimer).Seconds())
 			if err != nil {
+				errCounter.WithLabelValues(strconv.Itoa(http.StatusBadRequest), r.Method).Inc()
 				return
 			}
 			return
@@ -371,7 +465,9 @@ func UpdateWeatherData(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusOK)
 			_, err := w.Write([]byte(`{"message": "weather data updated successfully with id=` + strconv.FormatInt(weatherData.WeatherID, 10) + `"}`))
+			httpRequestsDuration.WithLabelValues(strconv.Itoa(http.StatusOK), r.Method).Observe(time.Since(startTimer).Seconds())
 			if err != nil {
+				errCounter.WithLabelValues(strconv.Itoa(http.StatusOK), r.Method).Inc()
 				return
 			}
 			return
@@ -379,7 +475,9 @@ func UpdateWeatherData(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusNotFound)
 			_, err := w.Write([]byte(`{"message": "weather data not found"}`))
+			httpRequestsDuration.WithLabelValues(strconv.Itoa(http.StatusNotFound), r.Method).Observe(time.Since(startTimer).Seconds())
 			if err != nil {
+				errCounter.WithLabelValues(strconv.Itoa(http.StatusNotFound), r.Method).Inc()
 				return
 			}
 			return
@@ -387,7 +485,9 @@ func UpdateWeatherData(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusInternalServerError)
 			_, err := w.Write([]byte(`{"message": ` + "\"" + funcErr.Error() + "\"" + `}`))
+			httpRequestsDuration.WithLabelValues(strconv.Itoa(http.StatusInternalServerError), r.Method).Observe(time.Since(startTimer).Seconds())
 			if err != nil {
+				errCounter.WithLabelValues(strconv.Itoa(http.StatusInternalServerError), r.Method).Inc()
 				return
 			}
 			return
@@ -399,7 +499,9 @@ func UpdateWeatherData(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusBadRequest)
 			_, err := w.Write([]byte(`{"message": "invalid JSON payload"}`))
+			httpRequestsDuration.WithLabelValues(strconv.Itoa(http.StatusBadRequest), r.Method).Observe(time.Since(startTimer).Seconds())
 			if err != nil {
+				errCounter.WithLabelValues(strconv.Itoa(http.StatusBadRequest), r.Method).Inc()
 				return
 			}
 			return
@@ -410,7 +512,9 @@ func UpdateWeatherData(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusOK)
 			_, err := w.Write([]byte(`{"message": "forecast data updated successfully with id=` + strconv.FormatInt(forecastData.ForecastID, 10) + `"}`))
+			httpRequestsDuration.WithLabelValues(strconv.Itoa(http.StatusOK), r.Method).Observe(time.Since(startTimer).Seconds())
 			if err != nil {
+				errCounter.WithLabelValues(strconv.Itoa(http.StatusOK), r.Method).Inc()
 				return
 			}
 			return
@@ -418,7 +522,9 @@ func UpdateWeatherData(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusNotFound)
 			_, err := w.Write([]byte(`{"message": "forecast data not found"}`))
+			httpRequestsDuration.WithLabelValues(strconv.Itoa(http.StatusNotFound), r.Method).Observe(time.Since(startTimer).Seconds())
 			if err != nil {
+				errCounter.WithLabelValues(strconv.Itoa(http.StatusNotFound), r.Method).Inc()
 				return
 			}
 			return
@@ -426,7 +532,9 @@ func UpdateWeatherData(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusInternalServerError)
 			_, err := w.Write([]byte(`{"message": ` + "\"" + funcErr.Error() + "\"" + `}`))
+			httpRequestsDuration.WithLabelValues(strconv.Itoa(http.StatusInternalServerError), r.Method).Observe(time.Since(startTimer).Seconds())
 			if err != nil {
+				errCounter.WithLabelValues(strconv.Itoa(http.StatusInternalServerError), r.Method).Inc()
 				return
 			}
 			return
