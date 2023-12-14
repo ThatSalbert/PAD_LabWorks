@@ -193,9 +193,10 @@ services:
       - GATEWAY_PORT=9080
       - SERVICEDISC_HOSTNAME=service_discovery
       - SERVICEDISC_PORT=9000
-      - TIMEOUT=0.05
+      - TIMEOUT=0.15
       - FAILURE_LIMIT=3
       - FAILURE_THRESHOLD=3.5
+      - REROUTE_LIMIT=3
   prometheus:
     container_name: "prometheus"
     image: prom/prometheus:latest

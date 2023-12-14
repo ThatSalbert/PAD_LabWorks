@@ -9,10 +9,12 @@ def next_service(service_name):
     if service_name in services:
         if services[service_name]['counter'] < len(services[service_name]['services']):
             services[service_name]['counter'] += 1
-            return services[service_name]['services'][services[service_name]['counter']]
+            counter_index = services[service_name]['counter'] - 1
+            return services[service_name]['services'][counter_index]
         else:
             services[service_name]['counter'] = 1
-            return services[service_name]['services'][services[service_name]['counter']]
+            counter_index = services[service_name]['counter'] - 1
+            return services[service_name]['services'][counter_index]
     else:
         return None
 
@@ -25,7 +27,7 @@ def add_service():
     service_url = data['service_address']
     if service_type not in services:
         services[service_type] = dict()
-        services[service_type]['counter'] = 0
+        services[service_type]['counter'] = 1
         services[service_type]['services'] = []
         service_info = {
             'service_name': service_name,
@@ -50,7 +52,7 @@ def add_service():
 
 @api.route('/get_service', methods = ['GET'])
 def get_service():
-    service_type = request.args.get('service_type')
+    service_type = request.args.get('service_name')
     service = next_service(service_type)
     if service is not None:
         response = jsonify(service)

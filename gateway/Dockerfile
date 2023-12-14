@@ -8,8 +8,8 @@ RUN pip install --no-cache-dir --upgrade -r ./requirements.txt
 
 COPY . .
 
-EXPOSE 9090
+EXPOSE 9080
 
 ENV FLASK_APP=gateway.py
 
-CMD ["python", "-m", "flask", "run", "--host=0.0.0.0", "--port=9090"]
+CMD ["python", "-m", "flask", "run", "--host=0.0.0.0", "--port=9080", "--debug"]

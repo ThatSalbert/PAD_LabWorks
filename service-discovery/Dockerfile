@@ -12,4 +12,4 @@ EXPOSE 9000
 
 ENV FLASK_APP=service_discovery.py
 
-CMD ["python", "-m", "flask", "run", "--host=0.0.0.0", "--port=9000"]
+CMD ["python", "-m", "flask", "run", "--host=0.0.0.0", "--port=9000", "--debug"]
