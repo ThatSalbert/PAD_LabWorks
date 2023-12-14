@@ -262,3 +262,41 @@ func UpdateForecast(forecastID int64, weather payload.UpdateDataForecast, db *sq
 		}
 	}
 }
+
+func AddCity(city payload.AddCity, db *sql.DB) (errCode int16, err error) {
+	row, err := db.Query("INSERT INTO location_table (country, city, latitude, longitude) SELECT $1, $2, $3, $4 WHERE NOT EXISTS (SELECT 1 FROM location_table WHERE UPPER(country) LIKE UPPER($1) AND UPPER(city) LIKE UPPER($2));", city.Country, city.City, city.Latitude, city.Longitude)
+	if err != nil {
+		fmt.Println(err)
+		return 500, errors.New("internal server error")
+	}
+	defer func(row *sql.Rows) {
+		err := row.Close()
+		if err != nil {
+			log.Fatal(err)
+		}
+	}(row)
+	if !row.Next() {
+		return 409, errors.New("city already exists")
+	} else {
+		return 200, nil
+	}
+}
+
+func RemoveCity(city payload.RemoveCity, db *sql.DB) (errCode int16, err error) {
+	row, err := db.Query("DELETE FROM location_table WHERE UPPER(country) LIKE UPPER($1) AND UPPER(city) LIKE UPPER($2);", city.Country, city.City)
+	if err != nil {
+		fmt.Println(err)
+		return 500, errors.New("internal server error")
+	}
+	defer func(row *sql.Rows) {
+		err := row.Close()
+		if err != nil {
+			log.Fatal(err)
+		}
+	}(row)
+	if !row.Next() {
+		return 404, errors.New("city not found")
+	} else {
+		return 200, nil
+	}
+}

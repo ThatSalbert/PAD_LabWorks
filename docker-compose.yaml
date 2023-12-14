@@ -192,11 +192,27 @@ services:
     environment:
       - GATEWAY_PORT=9080
       - SERVICEDISC_HOSTNAME=service_discovery
+      - COORDINATOR_HOSTNAME=coordinator
+      - COORDINATOR_PORT=9081
       - SERVICEDISC_PORT=9000
       - TIMEOUT=0.15
       - FAILURE_LIMIT=3
       - FAILURE_THRESHOLD=3.5
       - REROUTE_LIMIT=3
+  coordinator:
+    container_name: "coordinator"
+    image: thesalbert/coordinator:latest
+    build: ./coordinator
+    restart: always
+    ports:
+      - "9081:9081"
+    depends_on:
+      - service_discovery
+    environment:
+      - COORDINATOR_PORT=9081
+      - SERVICEDISC_HOSTNAME=service_discovery
+      - SERVICEDISC_PORT=9000
+      - TIMEOUT=0.15
   prometheus:
     container_name: "prometheus"
     image: prom/prometheus:latest

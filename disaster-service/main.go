@@ -109,6 +109,15 @@ func main() {
 	//PUT /disaster/alert?alert_id={alert_id}
 	router.HandleFunc("/disaster/alert", PutDisasterAlert).Methods("PUT").Queries("alert_id", "{alert_id}")
 
+	//POST /disaster/add_city/prepare
+	router.HandleFunc("/disaster/add_city/prepare", AddCityPrepare).Methods("POST")
+
+	//POST /disaster/add_city/commit
+	router.HandleFunc("/disaster/add_city/commit", AddCity).Methods("POST")
+
+	//POST /disaster/add_city/rollback
+	router.HandleFunc("/disaster/add_city/rollback", AddCityRollback).Methods("POST")
+
 	registerService(DISASTER_HOSTNAME, DISASTER_PORT, SERVICEDISC_HOSTNAME, SERVICEDISC_PORT, SERVICE_TYPE)
 
 	log.Fatal(http.ListenAndServe(":"+DISASTER_PORT, router))
@@ -323,6 +332,138 @@ func PutDisasterAlert(w http.ResponseWriter, r *http.Request) {
 		httpRequestsDuration.WithLabelValues(strconv.Itoa(http.StatusNotFound), r.Method).Observe(time.Since(startTimer).Seconds())
 		if err != nil {
 			errCounter.WithLabelValues(strconv.Itoa(http.StatusInternalServerError), r.Method).Inc()
+			return
+		}
+		return
+	default:
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		_, err := w.Write([]byte(`{"message": ` + "\"" + funcErr.Error() + "\"" + `}`))
+		httpRequestsDuration.WithLabelValues(strconv.Itoa(http.StatusInternalServerError), r.Method).Observe(time.Since(startTimer).Seconds())
+		if err != nil {
+			errCounter.WithLabelValues(strconv.Itoa(http.StatusInternalServerError), r.Method).Inc()
+			return
+		}
+		return
+	}
+}
+
+func AddCityPrepare(w http.ResponseWriter, r *http.Request) {
+	httpRequestsTotal.WithLabelValues(strconv.Itoa(http.StatusOK), r.Method).Inc()
+	startTimer := time.Now()
+	jsonDecoder := json.NewDecoder(r.Body)
+	var cityData payload.AddCity
+	err := jsonDecoder.Decode(&cityData)
+	if err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		_, err := w.Write([]byte(`{"message": "invalid JSON payload"}`))
+		httpRequestsDuration.WithLabelValues(strconv.Itoa(http.StatusBadRequest), r.Method).Observe(time.Since(startTimer).Seconds())
+		if err != nil {
+			errCounter.WithLabelValues(strconv.Itoa(http.StatusBadRequest), r.Method).Inc()
+			return
+		}
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	_, err = w.Write([]byte(`{"message": "city data prepared successfully", "payload": { "country": "` + cityData.Country + `", "city": "` + cityData.City + `", "latitude": ` + strconv.FormatFloat(float64(cityData.Latitude), 'f', -1, 64) + `, "longitude": ` + strconv.FormatFloat(float64(cityData.Longitude), 'f', -1, 64) + `}}`))
+	httpRequestsDuration.WithLabelValues(strconv.Itoa(http.StatusOK), r.Method).Observe(time.Since(startTimer).Seconds())
+	if err != nil {
+		errCounter.WithLabelValues(strconv.Itoa(http.StatusOK), r.Method).Inc()
+		return
+	}
+	return
+}
+
+func AddCity(w http.ResponseWriter, r *http.Request) {
+	httpRequestsTotal.WithLabelValues(strconv.Itoa(http.StatusOK), r.Method).Inc()
+	startTimer := time.Now()
+	jsonDecoder := json.NewDecoder(r.Body)
+	var cityData payload.AddCity
+	err := jsonDecoder.Decode(&cityData)
+	if err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		_, err := w.Write([]byte(`{"message": "invalid JSON payload"}`))
+		httpRequestsDuration.WithLabelValues(strconv.Itoa(http.StatusBadRequest), r.Method).Observe(time.Since(startTimer).Seconds())
+		if err != nil {
+			errCounter.WithLabelValues(strconv.Itoa(http.StatusBadRequest), r.Method).Inc()
+			return
+		}
+		return
+	}
+	funcErrCode, funcErr := database.AddCity(cityData, db)
+	switch funcErrCode {
+	case 200:
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		_, err := w.Write([]byte(`{"message": "city added successfully"}`))
+		httpRequestsDuration.WithLabelValues(strconv.Itoa(http.StatusOK), r.Method).Observe(time.Since(startTimer).Seconds())
+		if err != nil {
+			errCounter.WithLabelValues(strconv.Itoa(http.StatusOK), r.Method).Inc()
+			return
+		}
+		return
+	case 409:
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusConflict)
+		_, err := w.Write([]byte(`{"message": "city already exists"}`))
+		httpRequestsDuration.WithLabelValues(strconv.Itoa(http.StatusConflict), r.Method).Observe(time.Since(startTimer).Seconds())
+		if err != nil {
+			errCounter.WithLabelValues(strconv.Itoa(http.StatusConflict), r.Method).Inc()
+			return
+		}
+		return
+	default:
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		_, err := w.Write([]byte(`{"message": ` + "\"" + funcErr.Error() + "\"" + `}`))
+		httpRequestsDuration.WithLabelValues(strconv.Itoa(http.StatusInternalServerError), r.Method).Observe(time.Since(startTimer).Seconds())
+		if err != nil {
+			errCounter.WithLabelValues(strconv.Itoa(http.StatusInternalServerError), r.Method).Inc()
+			return
+		}
+		return
+	}
+}
+
+func AddCityRollback(w http.ResponseWriter, r *http.Request) {
+	httpRequestsTotal.WithLabelValues(strconv.Itoa(http.StatusOK), r.Method).Inc()
+	startTimer := time.Now()
+	jsonDecoder := json.NewDecoder(r.Body)
+	var cityData payload.RemoveCity
+	err := jsonDecoder.Decode(&cityData)
+	if err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		_, err := w.Write([]byte(`{"message": "invalid JSON payload"}`))
+		httpRequestsDuration.WithLabelValues(strconv.Itoa(http.StatusBadRequest), r.Method).Observe(time.Since(startTimer).Seconds())
+		if err != nil {
+			errCounter.WithLabelValues(strconv.Itoa(http.StatusBadRequest), r.Method).Inc()
+			return
+		}
+		return
+	}
+	funcErrCode, funcErr := database.RemoveCity(cityData, db)
+	switch funcErrCode {
+	case 200:
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		_, err := w.Write([]byte(`{"message": "city removed successfully"}`))
+		httpRequestsDuration.WithLabelValues(strconv.Itoa(http.StatusOK), r.Method).Observe(time.Since(startTimer).Seconds())
+		if err != nil {
+			errCounter.WithLabelValues(strconv.Itoa(http.StatusOK), r.Method).Inc()
+			return
+		}
+		return
+	case 404:
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusNotFound)
+		_, err := w.Write([]byte(`{"message": "city not found"}`))
+		httpRequestsDuration.WithLabelValues(strconv.Itoa(http.StatusNotFound), r.Method).Observe(time.Since(startTimer).Seconds())
+		if err != nil {
+			errCounter.WithLabelValues(strconv.Itoa(http.StatusNotFound), r.Method).Inc()
 			return
 		}
 		return

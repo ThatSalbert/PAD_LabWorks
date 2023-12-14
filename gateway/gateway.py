@@ -12,6 +12,9 @@ TASK_TIMEOUT = float(os.getenv('TIMEOUT'))
 SERVICEDISC_HOSTNAME = os.getenv('SERVICEDISC_HOSTNAME')
 SERVICEDISC_PORT = os.getenv('SERVICEDISC_PORT')
 THRESHOLD = float(os.getenv('FAILURE_THRESHOLD'))
+COORDINATOR_HOSTNAME = os.getenv('COORDINATOR_HOSTNAME')
+COORDINATOR_PORT = os.getenv('COORDINATOR_PORT')
+
 
 api = Flask(__name__)
 limiter = Limiter(get_remote_address, app = api, default_limits = ["200 per day", "50 per hour", "20 per minute"])
@@ -30,8 +33,9 @@ def circuit_breaker(task_timeout_limit, reroute_limit, failure_limit, threshold,
             response = jsonify(response_from_service.json())
             return response, response_from_service.status_code
         except (requests.exceptions.Timeout, requests.exceptions.ConnectionError):
-            response, code = circuit_breaker_retry(task_timeout_limit, failure_limit, threshold, url, data)
+            response_from_circuit_breaker_retry, code = circuit_breaker_retry(task_timeout_limit, failure_limit, threshold, url, data)
             if response is not None:
+                response = jsonify(response_from_circuit_breaker_retry.json())
                 return response, code
             continue
     response = jsonify({'message': 'Service unavailable'})
@@ -47,15 +51,22 @@ def circuit_breaker_retry(task_timeout_limit, failure_limit, threshold, url, dat
                 response_from_service = make_service_request(url)
             else:
                 response_from_service = make_service_request_with_data(url, data)
-            response = jsonify(response_from_service.json())
-            return response, response_from_service.status_code
+            return response_from_service, response_from_service.status_code
         except (requests.exceptions.Timeout, requests.exceptions.ConnectionError):
             timeouts += 1
             api.logger.info("Timeout: " + str(timeouts) + " out of " + str(failure_limit) + " for " + url)
             if timeouts >= failure_limit:
                 return None, 503
             continue
-                    
+
+def make_coordinator_request(data):
+    api.logger.info("Trying to make request to: " + str(COORDINATOR_HOSTNAME) + ":" + str(COORDINATOR_PORT) + "/prepare")
+    coordinator_address = 'http://' + COORDINATOR_HOSTNAME + ':' + COORDINATOR_PORT + '/prepare'
+    try:
+        response = requests.post(coordinator_address, json = data, timeout = TASK_TIMEOUT)
+    except requests.exceptions.Timeout:
+        raise requests.exceptions.Timeout
+    return response                    
 
 def make_service_discovery_request(service_name):
     service_discovery_address = 'http://' + SERVICEDISC_HOSTNAME + ':' + SERVICEDISC_PORT + '/get_service?service_name=' + service_name
@@ -66,7 +77,7 @@ def make_service_discovery_request(service_name):
     return response
 
 def make_service_request(url):
-    api.logger.info("Trying to make request to: " + url)
+    api.logger.info("Trying to make request to: " + url + " without data.")
     try:
         response = requests.get(url, timeout = TASK_TIMEOUT)
     except requests.exceptions.Timeout:
@@ -74,9 +85,9 @@ def make_service_request(url):
     return response
 
 def make_service_request_with_data(url, data):
-    api.logger.info("Trying to make request to: " + url)
+    api.logger.info("Trying to make request to: " + url  + " with data.")
     try:
-        response = requests.get(url, data = data, timeout = TASK_TIMEOUT)
+        response = requests.post(url, json = data, timeout = TASK_TIMEOUT)
     except requests.exceptions.Timeout:
         raise requests.exceptions.Timeout
     return response
@@ -124,12 +135,14 @@ def get_weather_forecast():
 @api.route('/weather/add_data', methods = ['POST'])
 @limiter.limit("20 per minute", error_message = 'Too Many Requests', override_defaults = False)
 def add_data():
+    api.logger.info("Called add_data")
     request_type = request.args.get('type')
     data = request.get_json()
     if request_type is None:
         params = '/weather/add_data'
     else:
         params = '/weather/add_data?type=' + request_type
+    api.logger.info("Trying to make request to service")
     response, code = circuit_breaker(TASK_TIMEOUT, REROUTE_LIMIT, FAILURE_LIMIT, THRESHOLD, 'weather', params, data)
     return response, code
 
@@ -189,6 +202,12 @@ def update_alert():
     response, code = circuit_breaker(TASK_TIMEOUT, REROUTE_LIMIT, FAILURE_LIMIT, THRESHOLD, 'disaster', params, data)
     return response, code
 
+@api.route('/weather/add_city', methods = ['POST'])
+@limiter.limit("20 per minute", error_message = 'Too Many Requests', override_defaults = False)
+def add_city():
+    data = request.get_json()
+    response = make_coordinator_request(data)
+    return response, response.status_code
 
 @api.errorhandler(429)
 def ratelimit_handler(e):
