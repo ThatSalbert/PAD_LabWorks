@@ -7,8 +7,7 @@ import (
 	"disaster-service/payload"
 	"encoding/json"
 	"github.com/prometheus/client_golang/prometheus"
-	_ "github.com/prometheus/client_golang/prometheus"
-	_ "github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"log"
 	"net/http"
 	"os"
@@ -31,6 +30,7 @@ var (
 	SERVICEDISC_PORT     = os.Getenv("SERVICEDISC_PORT")
 	DB_HOST              = os.Getenv("DB_HOST")
 	DB_PORT              = os.Getenv("DB_PORT")
+	METRICS_PORT		 = os.Getenv("METRICS_PORT")
 )
 
 var (
@@ -117,6 +117,14 @@ func main() {
 
 	//POST /disaster/add_city/rollback
 	router.HandleFunc("/disaster/add_city/rollback", AddCityRollback).Methods("POST")
+
+	router.Handle("/metrics", promhttp.Handler())
+
+	go func() {
+		if err := http.ListenAndServe(":"+METRICS_PORT, nil); err != nil {
+			log.Fatal(err)
+		}
+	}()
 
 	registerService(DISASTER_HOSTNAME, DISASTER_PORT, SERVICEDISC_HOSTNAME, SERVICEDISC_PORT, SERVICE_TYPE)
 

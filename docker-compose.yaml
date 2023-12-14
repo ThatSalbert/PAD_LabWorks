@@ -15,6 +15,8 @@ services:
       - "5432:5432"
     expose:
       - "5432"
+    networks:
+      - weather-app-net
   disaster-database:
     container_name: "disaster-database"
     image: postgres:16.0
@@ -29,6 +31,8 @@ services:
       - "5433:5432"
     expose:
       - "5432"
+    networks:
+      - weather-app-net
   test-database:
     container_name: "test-database"
     image: postgres:16.0
@@ -42,6 +46,8 @@ services:
       - "5434:5432"
     expose:
       - "5432"
+    networks:
+      - weather-app-net
   service_discovery:
     container_name: "service_discovery"
     image: thesalbert/service-discovery:latest
@@ -52,6 +58,8 @@ services:
     environment:
       - SERVICEDISC_PORT=9000
       - SERVICEDISC_HOSTNAME=service_discovery
+    networks:
+      - weather-app-net
   weather-service-1:
     container_name: "weather-service-1"
     image: thesalbert/weather-service:latest
@@ -59,12 +67,14 @@ services:
     restart: always
     ports:
       - "9001:9001"
+      - "40000:40000"
     depends_on:
       weather-database:
         condition: service_started
       service_discovery:
         condition: service_started
     environment:
+      - METRICS_PORT=40000
       - SERVICE_TYPE=weather
       - WEATHER_PORT=9001
       - WEATHER_HOSTNAME=weather-service-1
@@ -73,6 +83,8 @@ services:
       - DB_HOST=weather-database
       - DB_PORT=5432
       - MAX_CONNECTIONS=10
+    networks:
+      - weather-app-net
   weather-service-2:
     container_name: "weather-service-2"
     image: thesalbert/weather-service:latest
@@ -80,12 +92,14 @@ services:
     restart: always
     ports:
       - "9002:9002"
+      - "40001:40001"
     depends_on:
       weather-database:
         condition: service_started
       service_discovery:
         condition: service_started
     environment:
+      - METRICS_PORT=40001
       - SERVICE_TYPE=weather
       - WEATHER_PORT=9002
       - WEATHER_HOSTNAME=weather-service-2
@@ -94,6 +108,8 @@ services:
       - DB_HOST=weather-database
       - DB_PORT=5432
       - MAX_CONNECTIONS=10
+    networks:
+      - weather-app-net
   weather-service-3:
     container_name: "weather-service-3"
     image: thesalbert/weather-service:latest
@@ -101,12 +117,14 @@ services:
     restart: always
     ports:
       - "9003:9003"
+      - "40002:40002"
     depends_on:
       weather-database:
         condition: service_started
       service_discovery:
         condition: service_started
     environment:
+      - METRICS_PORT=40002
       - SERVICE_TYPE=weather
       - WEATHER_PORT=9003
       - WEATHER_HOSTNAME=weather-service-3
@@ -115,6 +133,8 @@ services:
       - DB_HOST=weather-database
       - DB_PORT=5432
       - MAX_CONNECTIONS=10
+    networks:
+      - weather-app-net
   disaster-service-1:
     container_name: "disaster-service-1"
     image: thesalbert/disaster-service:latest
@@ -122,6 +142,7 @@ services:
     restart: always
     ports:
       - "9091:9091"
+      - "50000:50000"
     depends_on:
       disaster-database:
         condition: service_started
@@ -130,6 +151,7 @@ services:
       test-database:
         condition: service_started
     environment:
+      - METRICS_PORT=50000
       - SERVICE_TYPE=disaster
       - DISASTER_PORT=9091
       - DISASTER_HOSTNAME=disaster-service-1
@@ -138,6 +160,8 @@ services:
       - DB_HOST=disaster-database
       - DB_PORT=5432
       - MAX_CONNECTIONS=10
+    networks:
+      - weather-app-net
   disaster-service-2:
     container_name: "disaster-service-2"
     image: thesalbert/disaster-service:latest
@@ -145,12 +169,14 @@ services:
     restart: always
     ports:
       - "9092:9092"
+      - "50001:50001"
     depends_on:
       disaster-database:
         condition: service_started
       service_discovery:
         condition: service_started
     environment:
+      - METRICS_PORT=50001
       - SERVICE_TYPE=disaster
       - DISASTER_PORT=9092
       - DISASTER_HOSTNAME=disaster-service-2
@@ -159,6 +185,8 @@ services:
       - DB_HOST=disaster-database
       - DB_PORT=5432
       - MAX_CONNECTIONS=10
+    networks:
+      - weather-app-net
   disaster-service-3:
     container_name: "disaster-service-3"
     image: thesalbert/disaster-service:latest
@@ -166,12 +194,14 @@ services:
     restart: always
     ports:
       - "9093:9093"
+      - "50002:50002"
     depends_on:
       disaster-database:
         condition: service_started
       service_discovery:
         condition: service_started
     environment:
+      - METRICS_PORT=50002
       - SERVICE_TYPE=disaster
       - DISASTER_PORT=9093
       - DISASTER_HOSTNAME=disaster-service-3
@@ -180,6 +210,8 @@ services:
       - DB_HOST=disaster-database
       - DB_PORT=5432
       - MAX_CONNECTIONS=10
+    networks:
+      - weather-app-net
   gateway:
     container_name: "gateway"
     image: thesalbert/gateway:latest
@@ -199,6 +231,8 @@ services:
       - FAILURE_LIMIT=3
       - FAILURE_THRESHOLD=3.5
       - REROUTE_LIMIT=3
+    networks:
+      - weather-app-net
   coordinator:
     container_name: "coordinator"
     image: thesalbert/coordinator:latest
@@ -213,29 +247,42 @@ services:
       - SERVICEDISC_HOSTNAME=service_discovery
       - SERVICEDISC_PORT=9000
       - TIMEOUT=0.15
+    networks:
+      - weather-app-net
   prometheus:
     container_name: "prometheus"
     image: prom/prometheus:latest
     volumes:
-      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./prometheus:/etc/prometheus
+      - prometheus_volume:/prometheus
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
     restart: always
     ports:
       - "9090:9090"
-  # grafana:
-  #   container_name: "grafana"
-  #   image: grafana/grafana:latest
-  #   restart: always
-  #   ports:
-  #     - "3000:3000"
-  #   volumes:
-  #     - ./grafana:/etc/grafana/provisioning/
-  #   depends_on:
-  #     - prometheus
+    networks:
+      - weather-app-net
+  grafana:
+    container_name: "grafana"
+    image: grafana/grafana-oss:latest
+    restart: always
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana_volume:/var/lib/grafana
+    networks:
+      - weather-app-net
     
 volumes:
   weather-volume:
     driver: local
   disaster-volume:
     driver: local
+  prometheus_volume:
+    driver: local
+  grafana_volume:
+    driver: local
+
+networks:
+  weather-app-net:
+    driver: bridge

@@ -1,0 +1,56 @@
+global:
+  scrape_interval: 15s
+  scrape_timeout: 10s
+  evaluation_interval: 15s
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: []
+      scheme: http
+      timeout: 10s
+      api_version: v1
+
+scrape_configs:
+  - job_name: weather-service-1
+    metrics_path: /metrics
+    scheme: http
+    follow_redirects: 
+    static_configs:
+      - targets:
+          - weather-service-1:40000
+  - job_name: weather-service-2
+    metrics_path: /metrics
+    scheme: http
+    follow_redirects: 
+    static_configs:
+      - targets:
+          - weather-service-2:40001
+  - job_name: weather-service-3
+    metrics_path: /metrics
+    scheme: http
+    follow_redirects: 
+    static_configs:
+      - targets:
+          - weather-service-3:40002
+  - job_name: disaster-service-1
+    metrics_path: /metrics
+    scheme: http
+    follow_redirects: 
+    static_configs:
+      - targets:
+          - disaster-service-1:50000
+  - job_name: disaster-service-2
+    metrics_path: /metrics
+    scheme: http
+    follow_redirects: 
+    static_configs:
+      - targets:
+          - disaster-service-2:50001
+  - job_name: disaster-service-3
+    metrics_path: /metrics
+    scheme: http
+    follow_redirects: 
+    static_configs:
+      - targets:
+          - disaster-service-3:50002

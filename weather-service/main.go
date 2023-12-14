@@ -29,6 +29,7 @@ var (
 	DB_HOST              = os.Getenv("DB_HOST")
 	DB_PORT              = os.Getenv("DB_PORT")
 	MAX_CONNECTIONS      = os.Getenv("MAX_CONNECTIONS")
+	METRICS_PORT		 = os.Getenv("METRICS_PORT")
 )
 
 var (
@@ -121,6 +122,12 @@ func main() {
 	router.HandleFunc("/weather/add_city/rollback", AddCityRollback).Methods("POST")
 
 	router.Handle("/metrics", promhttp.Handler())
+
+	go func() {
+		if err := http.ListenAndServe(":"+METRICS_PORT, nil); err != nil {
+			log.Fatal(err)
+		}
+	}()
 
 	registerService(WEATHER_HOSTNAME, WEATHER_PORT, SERVICEDISC_HOSTNAME, SERVICEDISC_PORT, SERVICE_TYPE)
 
